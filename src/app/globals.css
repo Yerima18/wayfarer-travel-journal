@@ -444,3 +444,10 @@ body { background: var(--paper); color: var(--ink); }
 .world-map .map-geography-visited:hover { filter: none; stroke: var(--ink); stroke-width: 1.4; }
 .world-map .map-geography:hover { stroke: var(--ink); stroke-width: 1; }
 .content-grid { align-items: start; }
+
+/* Small screens: edit/delete are always visible and easy to tap (hover is unreliable on touch). */
+@media (max-width: 760px) {
+  .entry-actions { opacity: 1; gap: 4px; }
+  .entry-actions button { min-height: 36px; padding: 0 10px; border-radius: 999px; background: #f3efff; }
+  .entry-actions button:last-child { color: var(--coral); background: #ffe9e5; }
+}

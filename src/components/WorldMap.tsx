@@ -25,7 +25,8 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry }: WorldMa
   return (
     <div className="map-frame">
       <div className={hovered ? 'map-tip map-tip-on' : 'map-tip'} aria-hidden="true">
-        {hovered ? <>{hovered.canAdd && <Flag countryId={hovered.id} className="flag flag-small" />}{hovered.visited ? '📍 ' : ''}{hovered.name}{hovered.canAdd ? ' · click to add a place' : ''}</> : 'Point at a country'}
+        {hovered?.canAdd ? <Flag countryId={hovered.id} className="flag flag-small" /> : null}
+        <span>{hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ' · click to add a place' : ''}` : 'Point at a country'}</span>
       </div>
       <ComposableMap
         aria-label="World map showing countries in your travel journal"
