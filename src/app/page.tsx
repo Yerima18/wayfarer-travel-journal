@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
+import CountryPicker from '@/components/CountryPicker'
 import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
 import SearchBox, { type SearchPick } from '@/components/SearchBox'
@@ -10,10 +11,9 @@ import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
 import { citySuggestions } from '@/lib/cities'
-import { flagEmoji } from '@/lib/flags'
 import { useI18n } from '@/lib/i18n'
 import type { MessageKey } from '@/lib/messages'
-import { cityLabel, countryLabel, sortedCountries } from '@/lib/names'
+import { cityLabel, countryLabel } from '@/lib/names'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
@@ -420,7 +420,6 @@ function App() {
     const matches = query ? all.filter((city) => city.toLowerCase().includes(query)) : all
     return matches.slice(0, 8)
   }, [formCountry, formCity, locale])
-  const countryOptions = useMemo(() => sortedCountries(locale), [locale])
   const placeGroups = useMemo(() => {
     const groups = new Map<string, { id: string; name: string; entries: JournalEntry[] }>()
     entries.forEach((entry) => {
@@ -580,7 +579,7 @@ function App() {
           <div className="modal-top"><div><div className="panel-kicker">{editingEntry ? t('form.kickerEdit') : t('form.kickerNew')}</div><h2 id="modal-title">{editingEntry ? t('form.titleEdit') : t('form.titleNew')}</h2></div><button className="modal-close" type="button" aria-label={t('form.close')} onClick={() => setFormOpen(false)}>×</button></div>
           <p className="modal-intro">{t('form.intro')}</p>
           <form className="entry-form" onSubmit={addEntry} key={editingEntry?.id ?? 'new'}>
-            <label>{t('form.country')}<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>{t('form.chooseCountry')}</option>{countryOptions.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{countryLabel(country.id, locale)}</option>)}</select></label>
+            <label>{t('form.country')}<CountryPicker value={formCountry} onChange={setFormCountry} priorityIds={visitedCountryIds} /></label>
             <div className="city-field"><label>{t('form.city')}<input name="city" type="text" placeholder={t('form.cityPlaceholder')} value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label={t('form.suggested')}><span>{formCity ? t('form.suggestions') : t('form.popular')}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
             <div className="form-row"><label>{t('form.when')} <span className="optional">{t('form.optional')}</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>{t('form.note')} <span className="optional">{t('form.optional')}</span><input name="note" type="text" placeholder={t('form.notePlaceholder')} defaultValue={editingEntry?.note} maxLength={120} /></label></div>
             <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>{t('form.cancel')}</button><button className="save-button" type="submit">{editingEntry ? t('form.saveEdit') : t('form.saveNew')} <span>↗</span></button></div>

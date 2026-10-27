@@ -671,3 +671,10 @@ html[data-theme='dark'] .search-option-on { background: #3a3470; }
 }
 html[data-theme='dark'] .search-toggle { color: #c9baff; background: #2f2a5c; }
 html[data-theme='dark'] .search-expanded { background: var(--raise); }
+
+/* Searchable country field in the add-place form */
+.country-picker { position: relative; display: flex; align-items: center; }
+.country-picker-input { width: 100%; }
+.country-picker-has-flag { padding-left: 44px; }
+.country-picker-flag { position: absolute; left: 14px; pointer-events: none; }
+.country-picker-list { max-height: 240px; }

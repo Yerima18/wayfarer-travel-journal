@@ -31,15 +31,25 @@ function byRank<T extends { rank: number }>(items: T[]): T[] {
   return items.sort((a, b) => a.rank - b.rank)
 }
 
+function matchCountries(normalizedQuery: string, locale: Locale): CountryResult[] {
+  return byRank(countries.flatMap((country) => {
+    const rank = matchRank([normalize(country.name), normalize(countryLabel(country.id, 'en')), normalize(countryLabel(country.id, 'fr'))], normalizedQuery)
+    return rank === null ? [] : [{ rank, kind: 'country' as const, countryId: country.id, label: countryLabel(country.id, locale) }]
+  }))
+}
+
+/** Countries matching a typed name in either language, best matches first. */
+export function searchCountries(rawQuery: string, locale: Locale, limit: number): CountryResult[] {
+  const query = normalize(rawQuery)
+  return query ? matchCountries(query, locale).slice(0, limit) : []
+}
+
 /** Finds countries and cities by name in either language. Cities come from the popular-places list. */
 export function searchPlaces(rawQuery: string, locale: Locale): SearchResults {
   const query = normalize(rawQuery)
   if (!query) return { countries: [], cities: [] }
 
-  const countryHits = byRank(countries.flatMap((country) => {
-    const rank = matchRank([normalize(country.name), normalize(countryLabel(country.id, 'en')), normalize(countryLabel(country.id, 'fr'))], query)
-    return rank === null ? [] : [{ rank, kind: 'country' as const, countryId: country.id, label: countryLabel(country.id, locale) }]
-  }))
+  const countryHits = matchCountries(query, locale)
 
   const cityHits = byRank(countries.flatMap((country) =>
     (citiesByCountryName[country.name] ?? []).flatMap((city) => {
