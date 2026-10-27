@@ -39,9 +39,11 @@ function matchCountries(normalizedQuery: string, locale: Locale): CountryResult[
 }
 
 /** Countries matching a typed name in either language, best matches first. */
-export function searchCountries(rawQuery: string, locale: Locale, limit: number): CountryResult[] {
+export function searchCountries(rawQuery: string, locale: Locale, limit: number, allowedIds?: ReadonlySet<string>): CountryResult[] {
   const query = normalize(rawQuery)
-  return query ? matchCountries(query, locale).slice(0, limit) : []
+  if (!query) return []
+  const matches = matchCountries(query, locale)
+  return (allowedIds ? matches.filter((match) => allowedIds.has(match.countryId)) : matches).slice(0, limit)
 }
 
 /** Finds countries and cities by name in either language. Cities come from the popular-places list. */

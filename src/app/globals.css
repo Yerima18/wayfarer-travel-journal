@@ -678,3 +678,9 @@ html[data-theme='dark'] .search-expanded { background: var(--raise); }
 .country-picker-has-flag { padding-left: 44px; }
 .country-picker-flag { position: absolute; left: 14px; pointer-events: none; }
 .country-picker-list { max-height: 240px; }
+
+.passport-picker .country-picker-input, .permit-row .country-picker-input { min-height: 46px; padding: 0 14px; border: 2px solid #ece6f7; border-radius: 14px; outline: none; color: var(--ink); background: #fff; font-size: 15px; font-weight: 500; }
+.passport-picker .country-picker-has-flag, .permit-row .country-picker-has-flag { padding-left: 44px; }
+.passport-picker .country-picker-input:focus, .permit-row .country-picker-input:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
+@media (max-width: 760px) { .passport-picker .country-picker-input, .permit-row .country-picker-input { font-size: 16px; } }
+html[data-theme='dark'] .passport-picker .country-picker-input, html[data-theme='dark'] .permit-row .country-picker-input { background: var(--raise); border-color: #3d3770; color: var(--ink); }

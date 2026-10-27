@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import CountryPicker from '@/components/CountryPicker'
 import Flag from './Flag'
 import WorldMap from './WorldMap'
 import { countries } from '@/lib/countries'
@@ -38,6 +39,8 @@ type Origin = { lat: number; lon: number }
 type Filter = 'all' | 'easy' | VisaStatus
 type Sort = 'easiest' | 'closest' | 'az'
 const GPS = '__gps'
+const passportIds = passportCountries.map((country) => country.id)
+const permitIds = countries.filter((country) => isSchengen(flagCode(country.id))).map((country) => country.id)
 
 function readSaved(key: string, allowed: (id: string) => boolean) {
   try {
@@ -124,11 +127,6 @@ export default function Explore({ visitedCountryIds, onAddPlace, focus }: Explor
     return statusLabel(info)
   }
 
-  const passportOptions = useMemo(
-    () => [...passportCountries].sort((a, b) => countryLabel(a.id, locale).localeCompare(countryLabel(b.id, locale), locale)),
-    [locale],
-  )
-  const permitOptions = useMemo(() => sortedCountries(locale).filter((country) => isSchengen(flagCode(country.id))), [locale])
   const allCountries = useMemo(() => sortedCountries(locale), [locale])
 
   const visited = useMemo(() => new Set(visitedCountryIds), [visitedCountryIds])
@@ -253,10 +251,7 @@ export default function Explore({ visitedCountryIds, onAddPlace, focus }: Explor
         </div>
         <label className="passport-picker">
           <span>{t('explore.passport')}</span>
-          <select value={passportId} onChange={(event) => choosePassport(event.target.value)}>
-            <option value="">{t('explore.choose')}</option>
-            {passportOptions.map((country) => <option value={country.id} key={country.id}>{flagged(country.id)}</option>)}
-          </select>
+          <CountryPicker value={passportId} onChange={choosePassport} candidateIds={passportIds} placeholder={t('explore.choose')} ariaLabel={t('explore.passport')} />
         </label>
       </div>
 
@@ -277,10 +272,7 @@ export default function Explore({ visitedCountryIds, onAddPlace, focus }: Explor
             <div className="near-me-head"><span aria-hidden="true">🪪</span><h2>{t('permit.title')}</h2></div>
             <div className="permit-row">
               <label>{t('permit.label')}
-                <select value={permitId} onChange={(event) => choosePermit(event.target.value)}>
-                  <option value="">{t('permit.none')}</option>
-                  {permitOptions.map((country) => <option value={country.id} key={country.id}>{flagged(country.id)}</option>)}
-                </select>
+                <CountryPicker value={permitId} onChange={choosePermit} candidateIds={permitIds} emptyLabel={t('permit.none')} placeholder={t('permit.none')} ariaLabel={t('permit.label')} />
               </label>
             </div>
             <p className="near-me-note"><span className="near-me-main">{t('permit.hint')}</span></p>
