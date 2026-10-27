@@ -23,9 +23,13 @@ import {
 const PASSPORT_KEY = 'wayfarer.passport'
 const PERMIT_KEY = 'wayfarer.permit'
 
+export type ExploreFocus = { countryId: string; nonce: number }
+
 type ExploreProps = {
   visitedCountryIds: string[]
   onAddPlace: (countryId: string) => void
+  /** A country picked from the search bar; the nonce lets the same country be picked twice. */
+  focus?: ExploreFocus | null
 }
 
 type Row = { id: string; name: string; info: VisaInfo }
@@ -52,7 +56,7 @@ function save(key: string, value: string) {
   }
 }
 
-export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps) {
+export default function Explore({ visitedCountryIds, onAddPlace, focus }: ExploreProps) {
   const { locale, t } = useI18n()
   const [passportId, setPassportId] = useState(() => readSaved(PASSPORT_KEY, (id) => passportCountries.some((country) => country.id === id)))
   const [permitId, setPermitId] = useState(() => readSaved(PERMIT_KEY, (id) => isSchengen(flagCode(id))))
@@ -61,6 +65,7 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
   const [sort, setSort] = useState<Sort>('easiest')
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [handledFocus, setHandledFocus] = useState<number | null>(null)
   const [shapes, setShapes] = useState<Shapes | null>(null)
   const [locationId, setLocationId] = useState('') // '' = passport country, GPS = device location, otherwise a country id
   const [gps, setGps] = useState<Origin | null>(null)
@@ -84,9 +89,15 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
     return () => { active = false }
   }, [passportId])
 
+  if (focus && focus.nonce !== handledFocus) {
+    setHandledFocus(focus.nonce)
+    setSelectedId(focus.countryId)
+    setFilter('all')
+    setQuery('')
+  }
+
   function choosePassport(id: string) {
     setPassportId(id)
-    setSelectedId(null)
     setLocationId((current) => (current === GPS ? current : ''))
     save(PASSPORT_KEY, id)
   }

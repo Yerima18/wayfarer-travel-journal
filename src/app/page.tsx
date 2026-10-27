@@ -3,8 +3,9 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
-import Explore from '@/components/Explore'
+import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
+import SearchBox, { type SearchPick } from '@/components/SearchBox'
 import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
@@ -87,6 +88,7 @@ function App() {
   const [showAll, setShowAll] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [exploreFocus, setExploreFocus] = useState<ExploreFocus | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
   const [localEntriesSnapshot, setLocalEntriesSnapshot] = useState<JournalEntry[]>([])
@@ -331,11 +333,19 @@ function App() {
     setFormOpen(false)
   }
 
-  function openAdd(countryId = '') {
+  function openAdd(countryId = '', city = '') {
     setEditingId(null)
     setFormCountry(countryId)
-    setFormCity('')
+    setFormCity(city)
     setFormOpen(true)
+  }
+
+  function handleSearchPick(pick: SearchPick) {
+    if (view === 'explore') {
+      setExploreFocus((current) => ({ countryId: pick.countryId, nonce: (current?.nonce ?? 0) + 1 }))
+      return
+    }
+    openAdd(pick.countryId, pick.city ? cityLabel(pick.city, locale) : '')
   }
 
   function openEdit(id: string) {
@@ -454,13 +464,14 @@ function App() {
       <div className="main-column" id="overview">
         <header className="topbar">
           <div className="breadcrumb"><span>{t('crumb.root')}</span><i>/</i><b>{view === 'overview' ? t('crumb.overview') : view === 'places' ? t('crumb.places') : t('crumb.explore')}</b></div>
+          <SearchBox onPick={handleSearchPick} />
           <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>{t('action.signOut')}</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
         </header>
 
         <main className="dashboard">
           {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
           {view === 'explore' ? (
-            <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} />
+            <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} focus={exploreFocus} />
           ) : view === 'places' ? (
           <section className="places-view" aria-labelledby="places-page-heading">
             <div className="places-head">
