@@ -4,6 +4,9 @@ import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from '
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
 import CountUp from '@/components/CountUp'
+import EntryPhotos from '@/components/EntryPhotos'
+import PhotoField from '@/components/PhotoField'
+import PhotoGallery from '@/components/PhotoGallery'
 import CountryPicker from '@/components/CountryPicker'
 import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
@@ -18,6 +21,8 @@ import type { MessageKey } from '@/lib/messages'
 import { cityLabel, countryLabel } from '@/lib/names'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
+import type { PhotoDraft } from '@/lib/photos'
+import { usePhotos } from '@/lib/use-photos'
 
 type JournalEntry = {
   id: string
@@ -30,6 +35,7 @@ type JournalEntry = {
 }
 
 const STORAGE_KEY = 'wayfarer.travel-journal.v1'
+const EMPTY_DRAFT: PhotoDraft = { kept: [], added: [] }
 
 function isJournalEntry(value: unknown): value is JournalEntry {
   if (!value || typeof value !== 'object') return false
@@ -97,6 +103,11 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [exploreFocus, setExploreFocus] = useState<ExploreFocus | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [photoDraft, setPhotoDraft] = useState<PhotoDraft>(EMPTY_DRAFT)
+  const [isSaving, setIsSaving] = useState(false)
+  const [gallery, setGallery] = useState<{ entryId: string; index: number } | null>(null)
+  const { photosByEntry, noticeKey, dismissNotice, savePhotos, discardPhotos } = usePhotos(userId)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
   const [localEntriesSnapshot, setLocalEntriesSnapshot] = useState<JournalEntry[]>([])
   const localEntriesRef = useRef<JournalEntry[]>([])
@@ -189,6 +200,7 @@ function App() {
     function handleSession(email: string | null, userId: string | null) {
       if (!active) return
       setUserEmail(email)
+      setUserId(userId)
       if (userId) {
         void loadEntries(userId)
         return
@@ -271,13 +283,21 @@ function App() {
     const note = String(formData.get('note') || '').trim()
     const country = countries.find((item) => item.id === countryId)
     if (!country || !city) return
+    setIsSaving(true)
+    try {
+      await saveEntry({ countryId, countryName: country.name, city, date, note })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
+  async function saveEntry({ countryId, countryName, city, date, note }: Pick<JournalEntry, 'countryId' | 'countryName' | 'city' | 'date' | 'note'>) {
     if (editingEntry) {
       if (userEmail) {
         setCloudStatus('syncing')
         const { error } = await createClient()
           .from('travel_entries')
-          .update({ country_id: countryId, country_name: country.name, city, visited_on: date || null, note })
+          .update({ country_id: countryId, country_name: countryName, city, visited_on: date || null, note })
           .eq('id', editingEntry.id)
         if (error) {
           setCloudStatus('error')
@@ -285,9 +305,10 @@ function App() {
           return
         }
         setCloudStatus('synced')
+        await savePhotos(editingEntry.id, photoDraft)
       }
       setEntries((current) => current.map((item) => item.id === editingEntry.id
-        ? { ...item, countryId, countryName: country.name, city, date, note }
+        ? { ...item, countryId, countryName, city, date, note }
         : item))
       setFormOpen(false)
       return
@@ -296,7 +317,7 @@ function App() {
     const entry: JournalEntry = {
       id: window.crypto.randomUUID(),
       countryId,
-      countryName: country.name,
+      countryName,
       city,
       date,
       note,
@@ -334,6 +355,7 @@ function App() {
       }
       setEntries((current) => [savedEntry, ...current])
       setCloudStatus('synced')
+      await savePhotos(savedEntry.id, photoDraft)
     } else {
       setEntries((current) => [entry, ...current])
     }
@@ -342,6 +364,7 @@ function App() {
 
   function openAdd(countryId = '', city = '') {
     setEditingId(null)
+    setPhotoDraft(EMPTY_DRAFT)
     setFormCountry(countryId)
     setFormCity(city)
     setFormOpen(true)
@@ -359,6 +382,7 @@ function App() {
     const entry = entries.find((item) => item.id === id)
     if (!entry) return
     setEditingId(id)
+    setPhotoDraft({ kept: photosByEntry[id] ?? [], added: [] })
     setFormCountry(entry.countryId)
     setFormCity(entry.city)
     setFormOpen(true)
@@ -375,6 +399,7 @@ function App() {
         return
       }
       setCloudStatus('synced')
+      await discardPhotos(entry.id)
     }
     setEntries((current) => current.filter((item) => item.id !== entry.id))
   }
@@ -475,6 +500,7 @@ function App() {
         </header>
 
         <main className="dashboard">
+          {noticeKey && <div className="import-notice" role="status"><span>{t(noticeKey)}</span><button type="button" onClick={dismissNotice}>{t('notice.dismiss')}</button></div>}
           {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
           {view === 'explore' ? (
             <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} focus={exploreFocus} />
@@ -507,7 +533,7 @@ function App() {
                     </div>
                     {group.entries.map((entry) => (
                       <div className="entry-card" key={entry.id}>
-                        <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                        <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3>{entry.note && <div className="entry-note">“{entry.note}”</div>}<EntryPhotos photos={photosByEntry[entry.id] ?? []} city={entry.city} onOpen={(index) => setGallery({ entryId: entry.id, index })} /></div>
                         <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={t('aria.edit', { city: entry.city })}>{t('action.edit')}</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={t('aria.delete', { city: entry.city })}>{t('action.delete')}</button></div>
                       </div>
                     ))}
@@ -555,7 +581,7 @@ function App() {
                   {recentEntries.map((entry, index) => (
                     <article className="entry-card reveal" style={revealStyle(index)} key={entry.id}>
                       <div className={`entry-marker entry-marker-${index % 3}`}><PinIcon small /></div>
-                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{countryLabel(entry.countryId, locale, entry.countryName)}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{countryLabel(entry.countryId, locale, entry.countryName)}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}<EntryPhotos photos={photosByEntry[entry.id] ?? []} city={entry.city} onOpen={(index) => setGallery({ entryId: entry.id, index })} /></div>
                       <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={t('aria.edit', { city: entry.city })}>{t('action.edit')}</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={t('aria.delete', { city: entry.city })}>{t('action.delete')}</button></div>
                     </article>
                   ))}
@@ -581,6 +607,8 @@ function App() {
         </main>
       </div>
 
+      {gallery && (photosByEntry[gallery.entryId]?.length ?? 0) > 0 && <PhotoGallery photos={photosByEntry[gallery.entryId]} startIndex={gallery.index} title={entries.find((item) => item.id === gallery.entryId)?.city ?? ''} onClose={() => setGallery(null)} />}
+
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
 
       {formOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false) }}>
@@ -591,7 +619,8 @@ function App() {
             <label>{t('form.country')}<CountryPicker value={formCountry} onChange={setFormCountry} priorityIds={visitedCountryIds} name="country" isRequired /></label>
             <div className="city-field"><label>{t('form.city')}<input name="city" type="text" placeholder={t('form.cityPlaceholder')} value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label={t('form.suggested')}><span>{formCity ? t('form.suggestions') : t('form.popular')}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
             <div className="form-row"><label>{t('form.when')} <span className="optional">{t('form.optional')}</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>{t('form.note')} <span className="optional">{t('form.optional')}</span><input name="note" type="text" placeholder={t('form.notePlaceholder')} defaultValue={editingEntry?.note} maxLength={120} /></label></div>
-            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>{t('form.cancel')}</button><button className="save-button" type="submit">{editingEntry ? t('form.saveEdit') : t('form.saveNew')} <span>↗</span></button></div>
+            {userEmail ? <PhotoField key={editingEntry?.id ?? 'new'} draft={photoDraft} onChange={setPhotoDraft} /> : <p className="photo-hint">{t('photos.signIn')}</p>}
+            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>{t('form.cancel')}</button><button className="save-button" type="submit" disabled={isSaving}>{editingEntry ? t('form.saveEdit') : t('form.saveNew')} <span>↗</span></button></div>
             <div className="privacy-note"><span>i</span> {userEmail ? t('form.privacyCloud') : t('form.privacyLocal')}</div>
           </form>
         </section>

@@ -11,6 +11,7 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 - English and French: the interface follows your browser language, with an EN/FR toggle in the top bar that remembers your choice
 - Schengen residence permits (Explore tab): say you hold a residence permit from a Schengen country and the other Schengen countries show as accessible for up to 90 days in any 180
 - Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
+- Photos (signed-in accounts): attach up to 5 pictures to a place, see them as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (and their hidden GPS data removed) before upload, and stored privately
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)
 - Works instantly with no account: your journal is saved in your browser
@@ -46,6 +47,7 @@ src/
   lib/supabase/           Supabase clients (browser + server) and env helpers
   proxy.ts                Keeps signed-in sessions fresh (Next.js proxy)
 supabase/schema.sql       Database table and security rules
+supabase/photos.sql       Photos table, private storage bucket and their rules
 ```
 
 ---
@@ -74,11 +76,12 @@ Open http://127.0.0.1:3000. Without any extra setup the app runs in **local mode
    ```
    `.env.local` is gitignored, so your keys are never pushed to GitHub.
 4. **Create the table:** open *SQL Editor* in Supabase, paste the whole content of `supabase/schema.sql`, and run it. This creates the `travel_entries` table and the security rules. You only do this once.
-5. **Allow email + password sign-in:** *Authentication → Providers → Email* must be enabled (it is by default).
-6. **Tell Supabase your site address:** *Authentication → URL Configuration*
+5. **Enable photos (optional):** in *SQL Editor*, paste and run `supabase/photos.sql` once. It creates the `entry_photos` table and a private `entry-photos` storage bucket, both readable only by their owner.
+6. **Allow email + password sign-in:** *Authentication → Providers → Email* must be enabled (it is by default).
+7. **Tell Supabase your site address:** *Authentication → URL Configuration*
    - **Site URL:** `http://localhost:3000` for local work (use your Vercel URL in production).
    - **Redirect URLs:** add `http://localhost:3000/auth/callback`.
-7. Restart `pnpm dev`, click **Sign in → Create an account**, confirm your email, and add a place.
+8. Restart `pnpm dev`, click **Sign in → Create an account**, confirm your email, and add a place.
 
 ## Deploy your own copy on Vercel
 
@@ -101,8 +104,9 @@ Any later `git push` to `main` redeploys automatically. If you change an environ
 | Problem | Likely cause and fix |
 | --- | --- |
 | "Account sync is ready to connect" in the sign-in window | The two environment variables are missing or misspelled. Fix them (locally or in Vercel) and redeploy/restart. |
-| Confirmation email link goes to the wrong page or errors | Site URL / Redirect URLs in Supabase do not match your site address (step 6 / step 5 above). |
+| Confirmation email link goes to the wrong page or errors | Site URL / Redirect URLs in Supabase do not match your site address (step 7 / step 5 above). |
 | "Sync issue" badge after signing in | The `travel_entries` table does not exist yet. Run `supabase/schema.sql`. |
+| "Your photos could not be loaded" | The photos table or bucket does not exist yet. Run `supabase/photos.sql`. |
 | Places disappear when switching browsers | You are not signed in. Browser-only places stay in that browser; sign in to sync. |
 | Confirmation emails do not arrive | Supabase's built-in email sender is rate-limited on the free plan. Wait a bit, check spam, or turn off "Confirm email" in *Authentication → Providers → Email* while testing. |
 
