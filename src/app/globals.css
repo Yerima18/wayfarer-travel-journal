@@ -684,3 +684,29 @@ html[data-theme='dark'] .search-expanded { background: var(--raise); }
 .passport-picker .country-picker-input:focus, .permit-row .country-picker-input:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
 @media (max-width: 760px) { .passport-picker .country-picker-input, .permit-row .country-picker-input { font-size: 16px; } }
 html[data-theme='dark'] .passport-picker .country-picker-input, html[data-theme='dark'] .permit-row .country-picker-input { background: var(--raise); border-color: #3d3770; color: var(--ink); }
+
+/* Motion: transform and opacity only, so it stays smooth on weak GPUs */
+.reveal { animation: reveal-up .6s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes reveal-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+.entry-modal { animation: modal-in .32s cubic-bezier(.2, .8, .2, 1); }
+.top-add, .empty-add, .save-button, .add-another, .chip, .gps-button, .sidebar-add, .cancel-button, .country-add { transition: transform .18s cubic-bezier(.2, .8, .2, 1), box-shadow .2s ease, background-color .2s ease, color .2s ease, border-color .2s ease; }
+.top-add:active, .empty-add:active, .save-button:active, .add-another:active, .chip:active, .gps-button:active, .sidebar-add:active, .cancel-button:active, .country-add:active { transform: scale(.96); }
+.entry-card, .country-card, .visa-row { transition: transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s ease, background-color .2s ease; }
+.map-geography { transition: fill .25s ease, stroke .25s ease; }
+
+/* World progress ring */
+.world-progress { display: flex; align-items: center; gap: 26px; margin-bottom: 17px; padding: 20px 26px; }
+.ring-wrap { position: relative; flex: 0 0 auto; width: 124px; height: 124px; }
+.ring { width: 100%; height: 100%; display: block; }
+.ring-track { stroke: #efe9fb; }
+.ring-center { position: absolute; inset: 0; display: grid; place-items: center; }
+.ring-center strong { color: var(--ink); font: 700 23px var(--serif); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.progress-copy { min-width: 0; }
+.progress-copy h2 { margin: 2px 0 6px; color: var(--ink); font: 600 26px var(--serif); letter-spacing: -.02em; }
+.progress-copy p { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.progress-rank { display: inline-block; padding: 6px 14px; border-radius: 999px; color: #7a3a00; background: #ffe7b8; font-size: 12.5px; font-weight: 700; }
+html[data-theme='dark'] .ring-track { stroke: #34306a; }
+html[data-theme='dark'] .progress-rank { color: #ffd66b; background: #4a3a14; }
+@media (max-width: 520px) { .world-progress { gap: 16px; padding: 16px; } .ring-wrap { width: 100px; height: 100px; } .ring-center strong { font-size: 19px; } .progress-copy h2 { font-size: 20px; } .progress-copy p { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .reveal, .entry-modal { animation: none; } .top-add:active, .empty-add:active, .save-button:active, .add-another:active, .chip:active, .gps-button:active, .sidebar-add:active, .cancel-button:active, .country-add:active { transform: none; } }

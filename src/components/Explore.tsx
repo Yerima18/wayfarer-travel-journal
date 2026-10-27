@@ -242,7 +242,7 @@ export default function Explore({ visitedCountryIds, onAddPlace, focus }: Explor
   ]
 
   return (
-    <section className="explore" aria-labelledby="explore-heading">
+    <section className="explore reveal" aria-labelledby="explore-heading">
       <div className="places-head">
         <div>
           <div className="overline"><span className="overline-line" /> {t('explore.overline')}</div>

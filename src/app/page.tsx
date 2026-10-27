@@ -1,11 +1,13 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
+import CountUp from '@/components/CountUp'
 import CountryPicker from '@/components/CountryPicker'
 import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
+import WorldProgress, { worldPercentOf } from '@/components/WorldProgress'
 import SearchBox, { type SearchPick } from '@/components/SearchBox'
 import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -45,6 +47,11 @@ function formatDate(value: string, locale: string, emptyLabel: string) {
   if (!value) return emptyLabel
   const date = new Date(`${value}T12:00:00`)
   return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(date).toUpperCase()
+}
+
+/** Staggers the entrance of the nth element on a screen. */
+function revealStyle(order: number): CSSProperties {
+  return { '--i': Math.min(order, 8) } as CSSProperties
 }
 
 function PinIcon({ small = false }: { small?: boolean }) {
@@ -429,7 +436,7 @@ function App() {
     })
     return Array.from(groups.values())
   }, [entries])
-  const worldPercent = Math.min(100, Math.round((countryCount / 195) * 100))
+  const worldPercent = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(worldPercentOf(countryCount))
   const explorerTitle = t(`home.rank${countryCount === 0 ? 0 : countryCount < 5 ? 1 : countryCount < 15 ? 2 : 3}` as MessageKey)
   const recentEntries = showAll ? entries : entries.slice(0, 5)
 
@@ -472,7 +479,7 @@ function App() {
           {view === 'explore' ? (
             <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} focus={exploreFocus} />
           ) : view === 'places' ? (
-          <section className="places-view" aria-labelledby="places-page-heading">
+          <section className="places-view reveal" aria-labelledby="places-page-heading">
             <div className="places-head">
               <div>
                 <div className="overline"><span className="overline-line" /> {t('places.overline')}</div>
@@ -490,8 +497,8 @@ function App() {
               </div>
             ) : (
               <div className="country-grid">
-                {placeGroups.map((group) => (
-                  <article className="panel country-card" key={group.id}>
+                {placeGroups.map((group, groupIndex) => (
+                  <article className="panel country-card reveal" style={revealStyle(groupIndex)} key={group.id}>
                     <div className="country-card-head">
                       <Flag countryId={group.id} className="flag flag-large" />
                       <h2>{countryLabel(group.id, locale, group.name)}</h2>
@@ -511,23 +518,25 @@ function App() {
           </section>
           ) : (
           <>
-          <section className="welcome-row">
+          <section className="welcome-row reveal">
             <div>
               <div className="overline"><span className="overline-line" /> {t('home.overline')}</div>
               <h1>{t('home.h1a')} <em>{t('home.h1b')}</em> ✈️</h1>
               <p>{t('home.intro')}</p>
             </div>
-            <div className="date-stamp"><span className="date-stamp-top">{t('home.stampTop')}</span><span className="date-stamp-value">{worldPercent}% · {explorerTitle}</span></div>
+            <div className="date-stamp"><span className="date-stamp-top">{t('home.stampTop')}</span><span className="date-stamp-value">{`${worldPercent}% · ${explorerTitle}`}</span></div>
           </section>
 
           <section className="stats-grid" aria-label={t('stats.aria')}>
-            <article className="stat-card stat-card-featured"><div className="stat-label">{t('stats.countries')}</div><div className="stat-bottom"><strong>{String(countryCount).padStart(2, '0')}</strong><span>{t('stats.countriesNote')}</span><span className="stat-icon" aria-hidden="true">🌍</span></div></article>
-            <article className="stat-card"><div className="stat-label">{t('stats.cities')}</div><div className="stat-bottom"><strong>{String(cityCount).padStart(2, '0')}</strong><span>{t('stats.citiesNote')}</span><span className="stat-icon" aria-hidden="true">📍</span></div></article>
-            <article className="stat-card"><div className="stat-label">{t('stats.memories')}</div><div className="stat-bottom"><strong>{String(entries.length).padStart(2, '0')}</strong><span>{t('stats.memoriesNote')}</span><span className="stat-icon" aria-hidden="true">✨</span></div></article>
+            <article className="stat-card stat-card-featured reveal" style={revealStyle(1)}><div className="stat-label">{t('stats.countries')}</div><div className="stat-bottom"><strong><CountUp value={countryCount} pad={2} /></strong><span>{t('stats.countriesNote')}</span><span className="stat-icon" aria-hidden="true">🌍</span></div></article>
+            <article className="stat-card reveal" style={revealStyle(2)}><div className="stat-label">{t('stats.cities')}</div><div className="stat-bottom"><strong><CountUp value={cityCount} pad={2} /></strong><span>{t('stats.citiesNote')}</span><span className="stat-icon" aria-hidden="true">📍</span></div></article>
+            <article className="stat-card reveal" style={revealStyle(3)}><div className="stat-label">{t('stats.memories')}</div><div className="stat-bottom"><strong><CountUp value={entries.length} pad={2} /></strong><span>{t('stats.memoriesNote')}</span><span className="stat-icon" aria-hidden="true">✨</span></div></article>
           </section>
 
+          <WorldProgress countryCount={countryCount} rankTitle={explorerTitle} />
+
           <section className="content-grid">
-            <article className="panel map-panel" aria-labelledby="map-heading">
+            <article className="panel map-panel reveal" style={revealStyle(4)} aria-labelledby="map-heading">
               <div className="panel-heading">
                 <div><div className="panel-kicker">{t('map.kicker')}</div><h2 id="map-heading">{t('map.title')}</h2></div>
                 <div className="map-legend"><span className="legend-visited" /> {t('map.been')} <span className="legend-unvisited" /> {t('map.dreaming')}</div>
@@ -536,7 +545,7 @@ function App() {
               <div className="map-foot"><span>{t('map.foot')}</span><span>{t('map.marked', { n: countryCount })}</span></div>
             </article>
 
-            <article className="panel recent-panel" id="places" aria-labelledby="places-heading">
+            <article className="panel recent-panel reveal" style={revealStyle(5)} id="places" aria-labelledby="places-heading">
               <div className="panel-heading recent-heading">
                 <div><div className="panel-kicker">{t('recent.kicker')}</div><h2 id="places-heading">{t('recent.title')}</h2></div>
                 {entries.length > 0 && <span className="recent-total">{String(entries.length).padStart(2, '0')}</span>}
@@ -544,7 +553,7 @@ function App() {
               {recentEntries.length > 0 ? (
                 <div className="entry-list">
                   {recentEntries.map((entry, index) => (
-                    <article className="entry-card" key={entry.id}>
+                    <article className="entry-card reveal" style={revealStyle(index)} key={entry.id}>
                       <div className={`entry-marker entry-marker-${index % 3}`}><PinIcon small /></div>
                       <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{countryLabel(entry.countryId, locale, entry.countryName)}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
                       <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={t('aria.edit', { city: entry.city })}>{t('action.edit')}</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={t('aria.delete', { city: entry.city })}>{t('action.delete')}</button></div>
