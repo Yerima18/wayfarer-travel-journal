@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wayfarer
 
-## Getting Started
+A personal travel journal built with Next.js, React, and TypeScript. Add a country and city, optionally include the date and a short note, then see visited countries highlighted on the world map and browse recent entries.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase account sync
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Supabase project.
+2. Copy `.env.example` to `.env.local` and fill in the project URL and publishable key from the Supabase project settings.
+3. Run `supabase/schema.sql` in the Supabase SQL Editor. The table uses row-level security so each signed-in account can access only its own entries.
+4. In Supabase Auth settings, allow email/password sign-in and add your local URL and deployed Vercel URL to the redirect URL list.
+5. Restart `pnpm dev`, create an account in Wayfarer, and confirm your email if Supabase asks.
 
-## Learn More
+Without Supabase environment values, the app remains a local browser preview. Existing browser entries are kept there; after signing in to a newly connected Supabase project, Wayfarer offers to import them into that account.
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push this repo to GitHub (`.env.local` is gitignored, so your keys stay private).
+2. Import the repo at [vercel.com/new](https://vercel.com/new).
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` under Settings → Environment Variables, then redeploy.
+4. In Supabase → Authentication → URL Configuration, set the Site URL to your Vercel URL and add `https://<your-app>.vercel.app/auth/callback` to the redirect URLs.

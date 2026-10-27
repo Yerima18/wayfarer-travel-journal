@@ -1,0 +1,17 @@
+.backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:rgba(27,37,34,.48);backdrop-filter:blur(7px)}
+.dialog{position:relative;width:min(100%,480px);padding:42px;border:1px solid #e8e4dc;border-radius:22px;background:#fbfaf7;box-shadow:0 28px 90px rgba(26,35,31,.2)}
+.close{position:absolute;top:18px;right:20px;width:36px;height:36px;border:0;border-radius:50%;background:#f0eee8;color:#4b554e;font-size:25px;line-height:1;cursor:pointer}
+.kicker{margin-bottom:14px;color:#8a7559;font-size:10px;font-weight:700;letter-spacing:.17em}
+.dialog h2{margin:0;color:#27342e;font-family:Georgia,serif;font-size:34px;font-weight:500;letter-spacing:-.04em}
+.intro{margin:12px 0 24px;color:#758078;font-size:14px;line-height:1.65}
+.form{display:grid;gap:16px}
+.form label{display:grid;gap:7px;color:#48544c;font-size:12px;font-weight:650}
+.form input{width:100%;height:46px;padding:0 13px;border:1px solid #deded6;border-radius:9px;background:#fff;color:#27342e;font:inherit;font-size:14px;outline:none}
+.form input:focus{border-color:#829784;box-shadow:0 0 0 3px rgba(130,151,132,.14)}
+.submit{display:flex;align-items:center;justify-content:center;gap:12px;min-height:48px;margin-top:5px;border:0;border-radius:9px;background:#334b3b;color:#fff;font-size:13px;font-weight:650;cursor:pointer}
+.submit:disabled{opacity:.65;cursor:wait}
+.submit span{font-size:17px}
+.switch{display:block;margin:18px auto 0;padding:5px;border:0;background:transparent;color:#68776b;font-size:12px;cursor:pointer}
+.error,.message{margin:0;font-size:12px;line-height:1.5}
+.error{color:#a64b40}.message{color:#526d56}
+@media(max-width:520px){.dialog{padding:34px 24px}.dialog h2{font-size:29px}}
