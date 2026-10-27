@@ -86,6 +86,7 @@ function App() {
   const [formCity, setFormCity] = useState('')
   const [showAll, setShowAll] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
   const [localEntriesSnapshot, setLocalEntriesSnapshot] = useState<JournalEntry[]>([])
@@ -222,6 +223,15 @@ function App() {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [menuOpen])
 
   useEffect(() => {
     if (!formOpen) return
@@ -421,10 +431,12 @@ function App() {
           <span className="brand-symbol"><AppMark /></span>
           <span className="brand-name">wayfarer</span>
         </button>
+        <button className={menuOpen ? 'menu-button menu-button-open' : 'menu-button'} type="button" aria-label={t('nav.menu')} aria-expanded={menuOpen} aria-controls="side-nav" onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button>
         <div className="brand-caption">{t('brand.caption')}</div>
 
         <div className="nav-label">{t('nav.label')}</div>
-        <nav className="side-nav" aria-label={t('nav.aria')}>
+        <div className={menuOpen ? 'menu-scrim menu-scrim-on' : 'menu-scrim'} onClick={() => setMenuOpen(false)} aria-hidden="true" />
+        <nav className={menuOpen ? 'side-nav side-nav-open' : 'side-nav'} id="side-nav" aria-label={t('nav.aria')} onClick={() => setMenuOpen(false)}>
           <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />{t('nav.overview')}</button>
           <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>{t('nav.places')}<span className="nav-count">{entries.length}</span></button>
           <button className={view === 'explore' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'explore' ? 'page' : undefined} onClick={() => setView('explore')}><span className="nav-glyph"><CompassIcon /></span>{t('nav.explore')}</button>
