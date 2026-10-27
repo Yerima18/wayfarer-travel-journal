@@ -418,3 +418,22 @@ body { background: var(--paper); color: var(--ink); }
 .flag-large.flag-none { font-size: 22px; }
 .entry-country { display: flex; align-items: center; }
 .map-tip { display: flex; align-items: center; }
+
+/* Phone polish */
+@media (max-width: 520px) {
+  .breadcrumb { display: none; }
+  .topbar { justify-content: flex-end; }
+  .stat-bottom { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .stat-bottom > span:not(.stat-icon) { line-height: 1.25; }
+  .entry-form input, .entry-form select { font-size: 16px; }
+  .entry-modal { max-height: 94vh; }
+  .city-chips { max-height: 128px; overflow-y: auto; }
+  .country-grid { grid-template-columns: 1fr; }
+  .map-tip { max-width: calc(100% - 20px); font-size: 12px; }
+}
+@media (hover: none) {
+  .entry-actions { gap: 4px; }
+  .entry-actions button { min-height: 36px; padding: 0 10px; border-radius: 999px; background: #f3efff; }
+  .entry-actions button:last-child { color: var(--coral); background: #ffe9e5; }
+  .chip, .country-add { min-height: 36px; }
+}

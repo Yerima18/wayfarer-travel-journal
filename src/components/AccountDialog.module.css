@@ -14,4 +14,4 @@
 .switch{display:block;margin:18px auto 0;padding:5px;border:0;background:transparent;color:#7c5cff;font-size:14px;font-weight:650;cursor:pointer}
 .error,.message{margin:0;font-size:12px;line-height:1.5}
 .error{color:#c0301e}.message{color:#1c7c70}
-@media(max-width:520px){.dialog{padding:34px 24px}.dialog h2{font-size:29px}}
+@media(max-width:520px){.dialog{padding:34px 24px}.dialog h2{font-size:29px}.form input{font-size:16px}}
