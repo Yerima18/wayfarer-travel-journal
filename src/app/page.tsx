@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
+import Flag from '@/components/Flag'
 import { countries } from '@/lib/countries'
 import { citySuggestions } from '@/lib/cities'
+import { flagEmoji } from '@/lib/flags'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
@@ -441,10 +443,10 @@ function App() {
               </div>
             ) : (
               <div className="country-grid">
-                {placeGroups.map((group, groupIndex) => (
+                {placeGroups.map((group) => (
                   <article className="panel country-card" key={group.id}>
                     <div className="country-card-head">
-                      <span className={`country-dot country-dot-${groupIndex % 3}`} aria-hidden="true" />
+                      <Flag countryId={group.id} className="flag flag-large" />
                       <h2>{group.name}</h2>
                       <span className="country-count">{group.entries.length}</span>
                       <button className="country-add" type="button" onClick={() => openAdd(group.id)} aria-label={`Add another place in ${group.name}`}>＋ Add</button>
@@ -497,7 +499,7 @@ function App() {
                   {recentEntries.map((entry, index) => (
                     <article className="entry-card" key={entry.id}>
                       <div className={`entry-marker entry-marker-${index % 3}`}><PinIcon small /></div>
-                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date)}</div><h3>{entry.city}</h3><p>{entry.countryName}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date)}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{entry.countryName}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
                       <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={`Edit ${entry.city}`}>Edit</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={`Delete ${entry.city}`}>Delete</button></div>
                     </article>
                   ))}
@@ -530,7 +532,7 @@ function App() {
           <div className="modal-top"><div><div className="panel-kicker">{editingEntry ? 'EDIT MEMORY' : 'A NEW MEMORY'}</div><h2 id="modal-title">{editingEntry ? 'Update this place' : 'Where have you been?'}</h2></div><button className="modal-close" type="button" aria-label="Close form" onClick={() => setFormOpen(false)}>×</button></div>
           <p className="modal-intro">Add a place to your personal atlas. You can fill in just the basics.</p>
           <form className="entry-form" onSubmit={addEntry} key={editingEntry?.id ?? 'new'}>
-            <label>Country<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>Choose a country</option>{countries.map((country) => <option value={country.id} key={country.id}>{country.name}</option>)}</select></label>
+            <label>Country<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>Choose a country</option>{countries.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{country.name}</option>)}</select></label>
             <div className="city-field"><label>City<input name="city" type="text" placeholder="Where did you go?" value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label="Suggested cities"><span>{formCity ? 'Suggestions' : 'Popular here'}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
             <div className="form-row"><label>When <span className="optional">OPTIONAL</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>A little note <span className="optional">OPTIONAL</span><input name="note" type="text" placeholder="A moment to remember…" defaultValue={editingEntry?.note} maxLength={120} /></label></div>
             <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>Maybe later</button><button className="save-button" type="submit">{editingEntry ? 'Save changes' : 'Save this place'} <span>↗</span></button></div>

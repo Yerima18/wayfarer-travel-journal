@@ -392,9 +392,6 @@ body { background: var(--paper); color: var(--ink); }
 .country-card { padding: 18px 18px 10px; }
 .country-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .country-card-head h2 { margin: 0; color: var(--ink); font: 600 20px/1.1 var(--serif); letter-spacing: -.03em; }
-.country-dot { width: 14px; height: 14px; flex: 0 0 14px; border-radius: 50%; background: var(--teal); }
-.country-dot-1 { background: var(--coral); }
-.country-dot-2 { background: var(--violet); }
 .country-count { padding: 2px 9px; border-radius: 999px; color: var(--muted); background: #f3efff; font: 12px var(--mono); }
 .country-add { margin-left: auto; padding: 4px 10px; border: 0; border-radius: 999px; color: var(--violet); background: #f3efff; font-size: 12px; font-weight: 700; cursor: pointer; }
 .country-add:hover { background: #e6deff; }
@@ -412,3 +409,12 @@ body { background: var(--paper); color: var(--ink); }
 .chip-on:hover { background: var(--violet); }
 @media (max-width: 520px) { .places-head { display: block; } .places-head .top-add { margin-top: 14px; } }
 @media (max-width: 760px) { .nav-link { width: auto; } }
+
+/* Flags */
+.flag { display: inline-block; flex: 0 0 auto; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px rgba(42,33,80,.12); background: #fff; }
+.flag-small { width: 18px; height: 13.5px; vertical-align: -2px; margin-right: 7px; }
+.flag-large { width: 30px; height: 22.5px; }
+.flag-none { box-shadow: none; background: none; font-size: 15px; line-height: 1; text-align: center; }
+.flag-large.flag-none { font-size: 22px; }
+.entry-country { display: flex; align-items: center; }
+.map-tip { display: flex; align-items: center; }

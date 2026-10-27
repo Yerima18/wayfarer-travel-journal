@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { countries } from '@/lib/countries'
+import Flag from './Flag'
 import { ComposableMap, Geographies, Geography, Graticule, Sphere } from 'react-simple-maps'
 
 type WorldMapProps = {
@@ -19,12 +20,12 @@ function colorFor(id: string) {
 
 export default function WorldMap({ visitedCountryIds, onSelectCountry }: WorldMapProps) {
   const visited = new Set(visitedCountryIds)
-  const [hovered, setHovered] = useState<{ name: string; visited: boolean; canAdd: boolean } | null>(null)
+  const [hovered, setHovered] = useState<{ id: string; name: string; visited: boolean; canAdd: boolean } | null>(null)
 
   return (
     <div className="map-frame">
       <div className={hovered ? 'map-tip map-tip-on' : 'map-tip'} aria-hidden="true">
-        {hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ' · click to add a place' : ''}` : 'Point at a country'}
+        {hovered ? <>{hovered.canAdd && <Flag countryId={hovered.id} className="flag flag-small" />}{hovered.visited ? '📍 ' : ''}{hovered.name}{hovered.canAdd ? ' · click to add a place' : ''}</> : 'Point at a country'}
       </div>
       <ComposableMap
         aria-label="World map showing countries in your travel journal"
@@ -41,7 +42,7 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry }: WorldMa
             const id = String(geography.id)
             const isVisited = visited.has(id)
             const canAdd = selectableIds.has(id)
-            const hover = { name: String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
+            const hover = { id, name: String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
             return (
               <Geography
                 key={geography.rsmKey}
