@@ -437,3 +437,10 @@ body { background: var(--paper); color: var(--ink); }
   .entry-actions button:last-child { color: var(--coral); background: #ffe9e5; }
   .chip, .country-add { min-height: 36px; }
 }
+
+/* Hover effects kept simple: GPU filters and blurs can blank the page on some Windows drivers. */
+.topbar { backdrop-filter: none; background: rgba(255,255,255,.92); }
+.world-map .map-geography { transition: none; }
+.world-map .map-geography-visited:hover { filter: none; stroke: var(--ink); stroke-width: 1.4; }
+.world-map .map-geography:hover { stroke: var(--ink); stroke-width: 1; }
+.content-grid { align-items: start; }
