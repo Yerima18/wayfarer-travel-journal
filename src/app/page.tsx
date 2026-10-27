@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
 import { countries } from '@/lib/countries'
+import { citySuggestions } from '@/lib/cities'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
@@ -62,6 +63,9 @@ function App() {
   const [storageWarning, setStorageWarning] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [view, setView] = useState<'overview' | 'places'>('overview')
+  const [formCountry, setFormCountry] = useState('')
+  const [formCity, setFormCity] = useState('')
   const [showAll, setShowAll] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -294,13 +298,19 @@ function App() {
     setFormOpen(false)
   }
 
-  function openAdd() {
+  function openAdd(countryId = '') {
     setEditingId(null)
+    setFormCountry(countryId)
+    setFormCity('')
     setFormOpen(true)
   }
 
   function openEdit(id: string) {
+    const entry = entries.find((item) => item.id === id)
+    if (!entry) return
     setEditingId(id)
+    setFormCountry(entry.countryId)
+    setFormCity(entry.city)
     setFormOpen(true)
   }
 
@@ -361,6 +371,21 @@ function App() {
     if (error) setCloudStatus('error')
   }
 
+  const suggestions = useMemo(() => {
+    const query = formCity.trim().toLowerCase()
+    const all = citySuggestions(formCountry)
+    const matches = query ? all.filter((city) => city.toLowerCase().includes(query)) : all
+    return matches.slice(0, 8)
+  }, [formCountry, formCity])
+  const placeGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; entries: JournalEntry[] }>()
+    entries.forEach((entry) => {
+      const group = groups.get(entry.countryId) ?? { id: entry.countryId, name: entry.countryName, entries: [] }
+      group.entries.push(entry)
+      groups.set(entry.countryId, group)
+    })
+    return Array.from(groups.values())
+  }, [entries])
   const worldPercent = Math.min(100, Math.round((countryCount / 195) * 100))
   const explorerTitle = countryCount === 0 ? 'Ready for takeoff' : countryCount < 5 ? 'Just getting started' : countryCount < 15 ? 'Globe trotter' : 'World wanderer'
   const recentEntries = showAll ? entries : entries.slice(0, 5)
@@ -368,35 +393,75 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <a className="brand" href="#overview" aria-label="Wayfarer home">
+        <button className="brand" type="button" onClick={() => setView('overview')} aria-label="Wayfarer home">
           <span className="brand-symbol"><AppMark /></span>
           <span className="brand-name">wayfarer</span>
-        </a>
+        </button>
         <div className="brand-caption">A PERSONAL TRAVEL JOURNAL</div>
 
         <div className="nav-label">YOUR SPACE</div>
         <nav className="side-nav" aria-label="Journal navigation">
-          <a className="nav-link nav-link-active" href="#overview"><span className="nav-glyph nav-glyph-home" />Overview</a>
-          <a className="nav-link" href="#places"><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>My places<span className="nav-count">{entries.length}</span></a>
+          <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />Overview</button>
+          <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>My places<span className="nav-count">{entries.length}</span></button>
         </nav>
 
         <div className="sidebar-bottom">
           <div className="sidebar-orbit" aria-hidden="true"><span /><i /><b /></div>
           <div className="sidebar-bottom-title">Everywhere<br />starts somewhere.</div>
           <p>{userEmail ? 'Your journal syncs securely to your account.' : 'Your journal is saved in this browser for now.'}</p>
-          <button className="sidebar-add" type="button" onClick={openAdd}><span>＋</span> Add a place</button>
+          <button className="sidebar-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button>
         </div>
         <div className="sidebar-footer"><span className="status-dot" /> YOUR PERSONAL ATLAS</div>
       </aside>
 
       <div className="main-column" id="overview">
         <header className="topbar">
-          <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>OVERVIEW</b></div>
-          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span>{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={openAdd}><span>＋</span> Add a place</button></div>
+          <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>{view === 'overview' ? 'OVERVIEW' : 'MY PLACES'}</b></div>
+          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span>{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button></div>
         </header>
 
         <main className="dashboard">
           {importAvailable && <div className="import-notice" role="status"><span>Your browser has {localEntriesSnapshot.length} saved {localEntriesSnapshot.length === 1 ? 'place' : 'places'} that are not in this account yet.</span><button type="button" onClick={importLocalJournal}>Import browser journal</button></div>}
+          {view === 'places' ? (
+          <section className="places-view" aria-labelledby="places-page-heading">
+            <div className="places-head">
+              <div>
+                <div className="overline"><span className="overline-line" /> EVERYWHERE YOU’VE BEEN</div>
+                <h1 id="places-page-heading">My places</h1>
+                <p>{entries.length === 0 ? 'Nothing here yet — your first stop is one click away.' : `${entries.length} ${entries.length === 1 ? 'memory' : 'memories'} across ${countryCount} ${countryCount === 1 ? 'country' : 'countries'}.`}</p>
+              </div>
+              <button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button>
+            </div>
+            {entries.length === 0 ? (
+              <div className="panel places-empty">
+                <div className="empty-pin"><PinIcon /></div>
+                <h3>No places yet</h3>
+                <p>Add a city you’ve visited and it will show up here, grouped by country.</p>
+                <button className="empty-add" type="button" onClick={() => openAdd()}>Add your first place <span>↗</span></button>
+              </div>
+            ) : (
+              <div className="country-grid">
+                {placeGroups.map((group, groupIndex) => (
+                  <article className="panel country-card" key={group.id}>
+                    <div className="country-card-head">
+                      <span className={`country-dot country-dot-${groupIndex % 3}`} aria-hidden="true" />
+                      <h2>{group.name}</h2>
+                      <span className="country-count">{group.entries.length}</span>
+                      <button className="country-add" type="button" onClick={() => openAdd(group.id)} aria-label={`Add another place in ${group.name}`}>＋ Add</button>
+                    </div>
+                    {group.entries.map((entry) => (
+                      <div className="entry-card" key={entry.id}>
+                        <div className="entry-copy"><div className="entry-date">{formatDate(entry.date)}</div><h3>{entry.city}</h3>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                        <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={`Edit ${entry.city}`}>Edit</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={`Delete ${entry.city}`}>Delete</button></div>
+                      </div>
+                    ))}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+          ) : (
+          <>
           <section className="welcome-row">
             <div>
               <div className="overline"><span className="overline-line" /> YOUR STORY, IN PLACES</div>
@@ -418,7 +483,7 @@ function App() {
                 <div><div className="panel-kicker">THE BIG PICTURE</div><h2 id="map-heading">Your world, so far</h2></div>
                 <div className="map-legend"><span className="legend-visited" /> Been there <span className="legend-unvisited" /> Still dreaming</div>
               </div>
-              <WorldMap visitedCountryIds={visitedCountryIds} />
+              <WorldMap visitedCountryIds={visitedCountryIds} onSelectCountry={openAdd} />
               <div className="map-foot"><span>EVERY PIN HAS A STORY</span><span>{countryCount} {countryCount === 1 ? 'COUNTRY' : 'COUNTRIES'} MARKED</span></div>
             </article>
 
@@ -437,19 +502,22 @@ function App() {
                     </article>
                   ))}
                   {entries.length > 5 && <button type="button" className="add-another" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show fewer' : `Show all ${entries.length}`} <span>{showAll ? '↑' : '↓'}</span></button>}
-                  <button type="button" className="add-another" onClick={openAdd}>Add another memory <span>↗</span></button>
+                  <button type="button" className="add-another" onClick={() => openAdd()}>Add another memory <span>↗</span></button>
                 </div>
               ) : (
                 <div className="empty-places">
                   <div className="empty-pin"><PinIcon /></div>
                   <h3>Your first story<br />is waiting.</h3>
                   <p>Add a city you’ve visited. It’ll find its place on your map.</p>
-                  <button className="empty-add" type="button" onClick={openAdd}>Add your first place <span>↗</span></button>
+                  <button className="empty-add" type="button" onClick={() => openAdd()}>Add your first place <span>↗</span></button>
                   {!ready && <span className="loading-note">Loading your journal…</span>}
                 </div>
               )}
             </article>
           </section>
+
+          </>
+          )}
 
           <footer className="dashboard-footer"><span>MADE TO HOLD THE PLACES THAT HOLD YOU</span><span>WAYFARER <i>·</i> A TRAVEL JOURNAL</span></footer>
         </main>
@@ -462,8 +530,8 @@ function App() {
           <div className="modal-top"><div><div className="panel-kicker">{editingEntry ? 'EDIT MEMORY' : 'A NEW MEMORY'}</div><h2 id="modal-title">{editingEntry ? 'Update this place' : 'Where have you been?'}</h2></div><button className="modal-close" type="button" aria-label="Close form" onClick={() => setFormOpen(false)}>×</button></div>
           <p className="modal-intro">Add a place to your personal atlas. You can fill in just the basics.</p>
           <form className="entry-form" onSubmit={addEntry} key={editingEntry?.id ?? 'new'}>
-            <label>Country<select name="country" defaultValue={editingEntry?.countryId ?? ''} required><option value="" disabled>Choose a country</option>{countries.map((country) => <option value={country.id} key={country.id}>{country.name}</option>)}</select></label>
-            <label>City<input name="city" type="text" placeholder="Where did you go?" defaultValue={editingEntry?.city} autoComplete="address-level2" required maxLength={80} /></label>
+            <label>Country<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>Choose a country</option>{countries.map((country) => <option value={country.id} key={country.id}>{country.name}</option>)}</select></label>
+            <div className="city-field"><label>City<input name="city" type="text" placeholder="Where did you go?" value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label="Suggested cities"><span>{formCity ? 'Suggestions' : 'Popular here'}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
             <div className="form-row"><label>When <span className="optional">OPTIONAL</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>A little note <span className="optional">OPTIONAL</span><input name="note" type="text" placeholder="A moment to remember…" defaultValue={editingEntry?.note} maxLength={120} /></label></div>
             <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>Maybe later</button><button className="save-button" type="submit">{editingEntry ? 'Save changes' : 'Save this place'} <span>↗</span></button></div>
             <div className="privacy-note"><span>i</span> {userEmail ? 'Private to your account and synced across devices.' : 'Saved only in this browser until you sign in.'}</div>

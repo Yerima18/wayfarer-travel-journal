@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { countries } from '@/lib/countries'
 import { ComposableMap, Geographies, Geography, Graticule, Sphere } from 'react-simple-maps'
 
 type WorldMapProps = {
   visitedCountryIds: string[]
+  onSelectCountry?: (countryId: string) => void
 }
 
+const selectableIds = new Set(countries.map((country) => country.id))
 const VISITED_COLORS = ['#ff6b57', '#ffb627', '#19b8a6', '#7c5cff', '#ff7ab6', '#2f9bff']
 
 function colorFor(id: string) {
@@ -14,14 +17,14 @@ function colorFor(id: string) {
   return VISITED_COLORS[sum % VISITED_COLORS.length]
 }
 
-export default function WorldMap({ visitedCountryIds }: WorldMapProps) {
+export default function WorldMap({ visitedCountryIds, onSelectCountry }: WorldMapProps) {
   const visited = new Set(visitedCountryIds)
-  const [hovered, setHovered] = useState<{ name: string; visited: boolean } | null>(null)
+  const [hovered, setHovered] = useState<{ name: string; visited: boolean; canAdd: boolean } | null>(null)
 
   return (
     <div className="map-frame">
       <div className={hovered ? 'map-tip map-tip-on' : 'map-tip'} aria-hidden="true">
-        {hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}` : 'Point at a country'}
+        {hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ' · click to add a place' : ''}` : 'Point at a country'}
       </div>
       <ComposableMap
         aria-label="World map showing countries in your travel journal"
@@ -37,6 +40,8 @@ export default function WorldMap({ visitedCountryIds }: WorldMapProps) {
           {({ geographies }) => geographies.map((geography) => {
             const id = String(geography.id)
             const isVisited = visited.has(id)
+            const canAdd = selectableIds.has(id)
+            const hover = { name: String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
             return (
               <Geography
                 key={geography.rsmKey}
@@ -45,9 +50,10 @@ export default function WorldMap({ visitedCountryIds }: WorldMapProps) {
                 fill={isVisited ? colorFor(id) : '#fdf3dc'}
                 stroke={isVisited ? '#ffffff' : '#ecdcb8'}
                 strokeWidth={0.65}
-                onMouseEnter={() => setHovered({ name: String(geography.properties?.name ?? ''), visited: isVisited })}
+                onClick={canAdd ? () => onSelectCountry?.(id) : undefined}
+                onMouseEnter={() => setHovered(hover)}
                 onMouseLeave={() => setHovered(null)}
-                onFocus={() => setHovered({ name: String(geography.properties?.name ?? ''), visited: isVisited })}
+                onFocus={() => setHovered(hover)}
                 onBlur={() => setHovered(null)}
               />
             )
