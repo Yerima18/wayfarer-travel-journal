@@ -361,6 +361,8 @@ function App() {
     if (error) setCloudStatus('error')
   }
 
+  const worldPercent = Math.min(100, Math.round((countryCount / 195) * 100))
+  const explorerTitle = countryCount === 0 ? 'Ready for takeoff' : countryCount < 5 ? 'Just getting started' : countryCount < 15 ? 'Globe trotter' : 'World wanderer'
   const recentEntries = showAll ? entries : entries.slice(0, 5)
 
   return (
@@ -398,16 +400,16 @@ function App() {
           <section className="welcome-row">
             <div>
               <div className="overline"><span className="overline-line" /> YOUR STORY, IN PLACES</div>
-              <h1>Somewhere, <em>remembered.</em></h1>
-              <p>Collect the places you’ve been and the little moments that made them yours.</p>
+              <h1>Where to next, <em>explorer?</em> ✈️</h1>
+              <p>Pin every place you’ve been, plus the little moments that made each one yours.</p>
             </div>
-            <div className="date-stamp"><span className="date-stamp-top">YOUR JOURNEY</span><span className="date-stamp-value">ONE PLACE AT A TIME</span></div>
+            <div className="date-stamp"><span className="date-stamp-top">WORLD EXPLORED</span><span className="date-stamp-value">{worldPercent}% · {explorerTitle}</span></div>
           </section>
 
           <section className="stats-grid" aria-label="Travel journal totals">
-            <article className="stat-card stat-card-featured"><div className="stat-label">COUNTRIES</div><div className="stat-bottom"><strong>{String(countryCount).padStart(2, '0')}</strong><span>on your map</span><span className="stat-icon stat-icon-globe">◎</span></div></article>
-            <article className="stat-card"><div className="stat-label">CITIES</div><div className="stat-bottom"><strong>{String(cityCount).padStart(2, '0')}</strong><span>little dots in the world</span><span className="stat-icon"><PinIcon small /></span></div></article>
-            <article className="stat-card"><div className="stat-label">MEMORIES</div><div className="stat-bottom"><strong>{String(entries.length).padStart(2, '0')}</strong><span>chapters collected</span><span className="stat-icon stat-icon-spark">✳</span></div></article>
+            <article className="stat-card stat-card-featured"><div className="stat-label">COUNTRIES</div><div className="stat-bottom"><strong>{String(countryCount).padStart(2, '0')}</strong><span>on your map</span><span className="stat-icon" aria-hidden="true">🌍</span></div></article>
+            <article className="stat-card"><div className="stat-label">CITIES</div><div className="stat-bottom"><strong>{String(cityCount).padStart(2, '0')}</strong><span>little dots in the world</span><span className="stat-icon" aria-hidden="true">📍</span></div></article>
+            <article className="stat-card"><div className="stat-label">MEMORIES</div><div className="stat-bottom"><strong>{String(entries.length).padStart(2, '0')}</strong><span>chapters collected</span><span className="stat-icon" aria-hidden="true">✨</span></div></article>
           </section>
 
           <section className="content-grid">
