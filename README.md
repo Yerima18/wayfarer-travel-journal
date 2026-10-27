@@ -8,6 +8,8 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 
 - Interactive world map that highlights every country you have visited
 - Passport checker (Explore tab): pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa; add "Near me" (use your device location, which never leaves your browser, or pick the country you are in) to see the closest easy destinations with distances, and add any country to your journal
+- English and French: the interface follows your browser language, with an EN/FR toggle in the top bar that remembers your choice
+- Schengen residence permits (Explore tab): say you hold a residence permit from a Schengen country and the other Schengen countries show as accessible for up to 90 days in any 180
 - Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)
@@ -114,6 +116,8 @@ pnpm lint    # run ESLint
 ```
 
 ## Visa data
+
+Residence-permit rules are only modelled for the Schengen area. Other countries have their own rules for permit holders that are not in the dataset, so they are intentionally not guessed.
 
 The Explore tab uses the open [passport-index-dataset](https://github.com/ilyankou/passport-index-dataset) (MIT). It was last updated in **January 2025**, so treat it as a guide and always confirm with the official government or embassy website before booking.
 

@@ -23,3 +23,4 @@
 :global(html[data-theme='dark']) .switch{color:#b6a3ff}
 :global(html[data-theme='dark']) .error{color:#ff9a86}
 :global(html[data-theme='dark']) .message{color:#7fe3d3}
+.submit .submitLabel{font-size:13px}

@@ -5,10 +5,14 @@ import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
 import Explore from '@/components/Explore'
 import Flag from '@/components/Flag'
+import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
 import { citySuggestions } from '@/lib/cities'
 import { flagEmoji } from '@/lib/flags'
+import { useI18n } from '@/lib/i18n'
+import type { MessageKey } from '@/lib/messages'
+import { cityLabel, countryLabel, sortedCountries } from '@/lib/names'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 
@@ -36,10 +40,10 @@ function isJournalEntry(value: unknown): value is JournalEntry {
     && typeof entry.createdAt === 'string'
 }
 
-function formatDate(value: string) {
-  if (!value) return 'DATE NOT SET'
+function formatDate(value: string, locale: string, emptyLabel: string) {
+  if (!value) return emptyLabel
   const date = new Date(`${value}T12:00:00`)
-  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(date).toUpperCase()
+  return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(date).toUpperCase()
 }
 
 function PinIcon({ small = false }: { small?: boolean }) {
@@ -70,6 +74,7 @@ function AppMark() {
 }
 
 function App() {
+  const { locale, t } = useI18n()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [ready, setReady] = useState(false)
   const [storageWritable, setStorageWritable] = useState(false)
@@ -227,6 +232,11 @@ function App() {
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [formOpen])
 
+  useEffect(() => {
+    document.documentElement.lang = locale
+    document.title = t('app.title')
+  }, [locale, t])
+
   const countryCount = useMemo(() => new Set(entries.map((entry) => entry.countryId)).size, [entries])
   const cityCount = useMemo(() => new Set(entries.map((entry) => `${entry.countryId}:${entry.city.trim().toLowerCase()}`)).size, [entries])
   const visitedCountryIds = useMemo(() => Array.from(new Set(entries.map((entry) => entry.countryId))), [entries])
@@ -328,7 +338,7 @@ function App() {
   }
 
   async function deleteEntry(entry: JournalEntry) {
-    if (!window.confirm(`Remove ${entry.city} from your journal?`)) return
+    if (!window.confirm(t('confirm.remove', { city: entry.city }))) return
     if (userEmail) {
       setCloudStatus('syncing')
       const { error } = await createClient().from('travel_entries').delete().eq('id', entry.id)
@@ -386,10 +396,11 @@ function App() {
 
   const suggestions = useMemo(() => {
     const query = formCity.trim().toLowerCase()
-    const all = citySuggestions(formCountry)
+    const all = citySuggestions(formCountry).map((city) => cityLabel(city, locale))
     const matches = query ? all.filter((city) => city.toLowerCase().includes(query)) : all
     return matches.slice(0, 8)
-  }, [formCountry, formCity])
+  }, [formCountry, formCity, locale])
+  const countryOptions = useMemo(() => sortedCountries(locale), [locale])
   const placeGroups = useMemo(() => {
     const groups = new Map<string, { id: string; name: string; entries: JournalEntry[] }>()
     entries.forEach((entry) => {
@@ -400,60 +411,60 @@ function App() {
     return Array.from(groups.values())
   }, [entries])
   const worldPercent = Math.min(100, Math.round((countryCount / 195) * 100))
-  const explorerTitle = countryCount === 0 ? 'Ready for takeoff' : countryCount < 5 ? 'Just getting started' : countryCount < 15 ? 'Globe trotter' : 'World wanderer'
+  const explorerTitle = t(`home.rank${countryCount === 0 ? 0 : countryCount < 5 ? 1 : countryCount < 15 ? 2 : 3}` as MessageKey)
   const recentEntries = showAll ? entries : entries.slice(0, 5)
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="brand" type="button" onClick={() => setView('overview')} aria-label="Wayfarer home">
+        <button className="brand" type="button" onClick={() => setView('overview')} aria-label={t('brand.aria')}>
           <span className="brand-symbol"><AppMark /></span>
           <span className="brand-name">wayfarer</span>
         </button>
-        <div className="brand-caption">A PERSONAL TRAVEL JOURNAL</div>
+        <div className="brand-caption">{t('brand.caption')}</div>
 
-        <div className="nav-label">YOUR SPACE</div>
-        <nav className="side-nav" aria-label="Journal navigation">
-          <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />Overview</button>
-          <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>My places<span className="nav-count">{entries.length}</span></button>
-          <button className={view === 'explore' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'explore' ? 'page' : undefined} onClick={() => setView('explore')}><span className="nav-glyph"><CompassIcon /></span>Explore</button>
+        <div className="nav-label">{t('nav.label')}</div>
+        <nav className="side-nav" aria-label={t('nav.aria')}>
+          <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />{t('nav.overview')}</button>
+          <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>{t('nav.places')}<span className="nav-count">{entries.length}</span></button>
+          <button className={view === 'explore' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'explore' ? 'page' : undefined} onClick={() => setView('explore')}><span className="nav-glyph"><CompassIcon /></span>{t('nav.explore')}</button>
         </nav>
 
         <div className="sidebar-bottom">
           <div className="sidebar-orbit" aria-hidden="true"><span /><i /><b /></div>
-          <div className="sidebar-bottom-title">Everywhere<br />starts somewhere.</div>
-          <p>{userEmail ? 'Your journal syncs securely to your account.' : 'Your journal is saved in this browser for now.'}</p>
-          <button className="sidebar-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button>
+          <div className="sidebar-bottom-title">{t('side.title1')}<br />{t('side.title2')}</div>
+          <p>{userEmail ? t('side.synced') : t('side.local')}</p>
+          <button className="sidebar-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button>
         </div>
-        <div className="sidebar-footer"><span className="status-dot" /> YOUR PERSONAL ATLAS</div>
+        <div className="sidebar-footer"><span className="status-dot" /> {t('side.footer')}</div>
       </aside>
 
       <div className="main-column" id="overview">
         <header className="topbar">
-          <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>{view === 'overview' ? 'OVERVIEW' : view === 'places' ? 'MY PLACES' : 'EXPLORE'}</b></div>
-          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button></div>
+          <div className="breadcrumb"><span>{t('crumb.root')}</span><i>/</i><b>{view === 'overview' ? t('crumb.overview') : view === 'places' ? t('crumb.places') : t('crumb.explore')}</b></div>
+          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>{t('action.signOut')}</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
         </header>
 
         <main className="dashboard">
-          {importAvailable && <div className="import-notice" role="status"><span>Your browser has {localEntriesSnapshot.length} saved {localEntriesSnapshot.length === 1 ? 'place' : 'places'} that are not in this account yet.</span><button type="button" onClick={importLocalJournal}>Import browser journal</button></div>}
+          {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
           {view === 'explore' ? (
             <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} />
           ) : view === 'places' ? (
           <section className="places-view" aria-labelledby="places-page-heading">
             <div className="places-head">
               <div>
-                <div className="overline"><span className="overline-line" /> EVERYWHERE YOU’VE BEEN</div>
-                <h1 id="places-page-heading">My places</h1>
-                <p>{entries.length === 0 ? 'Nothing here yet — your first stop is one click away.' : `${entries.length} ${entries.length === 1 ? 'memory' : 'memories'} across ${countryCount} ${countryCount === 1 ? 'country' : 'countries'}.`}</p>
+                <div className="overline"><span className="overline-line" /> {t('places.overline')}</div>
+                <h1 id="places-page-heading">{t('places.title')}</h1>
+                <p>{entries.length === 0 ? t('places.emptyLine') : t('places.summary', { memories: t('count.memories', { n: entries.length }), countries: t('count.countries', { n: countryCount }) })}</p>
               </div>
-              <button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button>
+              <button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button>
             </div>
             {entries.length === 0 ? (
               <div className="panel places-empty">
                 <div className="empty-pin"><PinIcon /></div>
-                <h3>No places yet</h3>
-                <p>Add a city you’ve visited and it will show up here, grouped by country.</p>
-                <button className="empty-add" type="button" onClick={() => openAdd()}>Add your first place <span>↗</span></button>
+                <h3>{t('places.emptyTitle')}</h3>
+                <p>{t('places.emptyText')}</p>
+                <button className="empty-add" type="button" onClick={() => openAdd()}>{t('action.addFirst')} <span>↗</span></button>
               </div>
             ) : (
               <div className="country-grid">
@@ -461,14 +472,14 @@ function App() {
                   <article className="panel country-card" key={group.id}>
                     <div className="country-card-head">
                       <Flag countryId={group.id} className="flag flag-large" />
-                      <h2>{group.name}</h2>
+                      <h2>{countryLabel(group.id, locale, group.name)}</h2>
                       <span className="country-count">{group.entries.length}</span>
-                      <button className="country-add" type="button" onClick={() => openAdd(group.id)} aria-label={`Add another place in ${group.name}`}>＋ Add</button>
+                      <button className="country-add" type="button" onClick={() => openAdd(group.id)} aria-label={t('aria.addInCountry', { name: countryLabel(group.id, locale, group.name) })}>{t('action.addShort')}</button>
                     </div>
                     {group.entries.map((entry) => (
                       <div className="entry-card" key={entry.id}>
-                        <div className="entry-copy"><div className="entry-date">{formatDate(entry.date)}</div><h3>{entry.city}</h3>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
-                        <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={`Edit ${entry.city}`}>Edit</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={`Delete ${entry.city}`}>Delete</button></div>
+                        <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                        <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={t('aria.edit', { city: entry.city })}>{t('action.edit')}</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={t('aria.delete', { city: entry.city })}>{t('action.delete')}</button></div>
                       </div>
                     ))}
                   </article>
@@ -480,32 +491,32 @@ function App() {
           <>
           <section className="welcome-row">
             <div>
-              <div className="overline"><span className="overline-line" /> YOUR STORY, IN PLACES</div>
-              <h1>Where to next, <em>explorer?</em> ✈️</h1>
-              <p>Pin every place you’ve been, plus the little moments that made each one yours.</p>
+              <div className="overline"><span className="overline-line" /> {t('home.overline')}</div>
+              <h1>{t('home.h1a')} <em>{t('home.h1b')}</em> ✈️</h1>
+              <p>{t('home.intro')}</p>
             </div>
-            <div className="date-stamp"><span className="date-stamp-top">WORLD EXPLORED</span><span className="date-stamp-value">{worldPercent}% · {explorerTitle}</span></div>
+            <div className="date-stamp"><span className="date-stamp-top">{t('home.stampTop')}</span><span className="date-stamp-value">{worldPercent}% · {explorerTitle}</span></div>
           </section>
 
-          <section className="stats-grid" aria-label="Travel journal totals">
-            <article className="stat-card stat-card-featured"><div className="stat-label">COUNTRIES</div><div className="stat-bottom"><strong>{String(countryCount).padStart(2, '0')}</strong><span>on your map</span><span className="stat-icon" aria-hidden="true">🌍</span></div></article>
-            <article className="stat-card"><div className="stat-label">CITIES</div><div className="stat-bottom"><strong>{String(cityCount).padStart(2, '0')}</strong><span>little dots in the world</span><span className="stat-icon" aria-hidden="true">📍</span></div></article>
-            <article className="stat-card"><div className="stat-label">MEMORIES</div><div className="stat-bottom"><strong>{String(entries.length).padStart(2, '0')}</strong><span>chapters collected</span><span className="stat-icon" aria-hidden="true">✨</span></div></article>
+          <section className="stats-grid" aria-label={t('stats.aria')}>
+            <article className="stat-card stat-card-featured"><div className="stat-label">{t('stats.countries')}</div><div className="stat-bottom"><strong>{String(countryCount).padStart(2, '0')}</strong><span>{t('stats.countriesNote')}</span><span className="stat-icon" aria-hidden="true">🌍</span></div></article>
+            <article className="stat-card"><div className="stat-label">{t('stats.cities')}</div><div className="stat-bottom"><strong>{String(cityCount).padStart(2, '0')}</strong><span>{t('stats.citiesNote')}</span><span className="stat-icon" aria-hidden="true">📍</span></div></article>
+            <article className="stat-card"><div className="stat-label">{t('stats.memories')}</div><div className="stat-bottom"><strong>{String(entries.length).padStart(2, '0')}</strong><span>{t('stats.memoriesNote')}</span><span className="stat-icon" aria-hidden="true">✨</span></div></article>
           </section>
 
           <section className="content-grid">
             <article className="panel map-panel" aria-labelledby="map-heading">
               <div className="panel-heading">
-                <div><div className="panel-kicker">THE BIG PICTURE</div><h2 id="map-heading">Your world, so far</h2></div>
-                <div className="map-legend"><span className="legend-visited" /> Been there <span className="legend-unvisited" /> Still dreaming</div>
+                <div><div className="panel-kicker">{t('map.kicker')}</div><h2 id="map-heading">{t('map.title')}</h2></div>
+                <div className="map-legend"><span className="legend-visited" /> {t('map.been')} <span className="legend-unvisited" /> {t('map.dreaming')}</div>
               </div>
               <WorldMap visitedCountryIds={visitedCountryIds} onSelectCountry={openAdd} />
-              <div className="map-foot"><span>EVERY PIN HAS A STORY</span><span>{`${countryCount} ${countryCount === 1 ? 'COUNTRY' : 'COUNTRIES'} MARKED`}</span></div>
+              <div className="map-foot"><span>{t('map.foot')}</span><span>{t('map.marked', { n: countryCount })}</span></div>
             </article>
 
             <article className="panel recent-panel" id="places" aria-labelledby="places-heading">
               <div className="panel-heading recent-heading">
-                <div><div className="panel-kicker">POSTCARDS FROM YOU</div><h2 id="places-heading">Recent places</h2></div>
+                <div><div className="panel-kicker">{t('recent.kicker')}</div><h2 id="places-heading">{t('recent.title')}</h2></div>
                 {entries.length > 0 && <span className="recent-total">{String(entries.length).padStart(2, '0')}</span>}
               </div>
               {recentEntries.length > 0 ? (
@@ -513,20 +524,20 @@ function App() {
                   {recentEntries.map((entry, index) => (
                     <article className="entry-card" key={entry.id}>
                       <div className={`entry-marker entry-marker-${index % 3}`}><PinIcon small /></div>
-                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date)}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{entry.countryName}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
-                      <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={`Edit ${entry.city}`}>Edit</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={`Delete ${entry.city}`}>Delete</button></div>
+                      <div className="entry-copy"><div className="entry-date">{formatDate(entry.date, locale, t('date.none'))}</div><h3>{entry.city}</h3><p className="entry-country"><Flag countryId={entry.countryId} className="flag flag-small" />{countryLabel(entry.countryId, locale, entry.countryName)}</p>{entry.note && <div className="entry-note">“{entry.note}”</div>}</div>
+                      <div className="entry-actions"><button type="button" onClick={() => openEdit(entry.id)} aria-label={t('aria.edit', { city: entry.city })}>{t('action.edit')}</button><button type="button" onClick={() => deleteEntry(entry)} aria-label={t('aria.delete', { city: entry.city })}>{t('action.delete')}</button></div>
                     </article>
                   ))}
-                  {entries.length > 5 && <button type="button" className="add-another" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show fewer' : `Show all ${entries.length}`} <span>{showAll ? '↑' : '↓'}</span></button>}
-                  <button type="button" className="add-another" onClick={() => openAdd()}>Add another memory <span>↗</span></button>
+                  {entries.length > 5 && <button type="button" className="add-another" onClick={() => setShowAll((value) => !value)}>{showAll ? t('action.showFewer') : t('action.showAll', { n: entries.length })} <span>{showAll ? '↑' : '↓'}</span></button>}
+                  <button type="button" className="add-another" onClick={() => openAdd()}>{t('action.addAnother')} <span>↗</span></button>
                 </div>
               ) : (
                 <div className="empty-places">
                   <div className="empty-pin"><PinIcon /></div>
-                  <h3>Your first story<br />is waiting.</h3>
-                  <p>Add a city you’ve visited. It’ll find its place on your map.</p>
-                  <button className="empty-add" type="button" onClick={() => openAdd()}>Add your first place <span>↗</span></button>
-                  {!ready && <span className="loading-note">Loading your journal…</span>}
+                  <h3>{t('empty.title1')}<br />{t('empty.title2')}</h3>
+                  <p>{t('empty.text')}</p>
+                  <button className="empty-add" type="button" onClick={() => openAdd()}>{t('action.addFirst')} <span>↗</span></button>
+                  {!ready && <span className="loading-note">{t('empty.loading')}</span>}
                 </div>
               )}
             </article>
@@ -535,7 +546,7 @@ function App() {
           </>
           )}
 
-          <footer className="dashboard-footer"><span>MADE TO HOLD THE PLACES THAT HOLD YOU</span><span>WAYFARER <i>·</i> A TRAVEL JOURNAL</span></footer>
+          <footer className="dashboard-footer"><span>{t('footer.left')}</span><span>{t('footer.right')}</span></footer>
         </main>
       </div>
 
@@ -543,14 +554,14 @@ function App() {
 
       {formOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false) }}>
         <section className="entry-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="modal-top"><div><div className="panel-kicker">{editingEntry ? 'EDIT MEMORY' : 'A NEW MEMORY'}</div><h2 id="modal-title">{editingEntry ? 'Update this place' : 'Where have you been?'}</h2></div><button className="modal-close" type="button" aria-label="Close form" onClick={() => setFormOpen(false)}>×</button></div>
-          <p className="modal-intro">Add a place to your personal atlas. You can fill in just the basics.</p>
+          <div className="modal-top"><div><div className="panel-kicker">{editingEntry ? t('form.kickerEdit') : t('form.kickerNew')}</div><h2 id="modal-title">{editingEntry ? t('form.titleEdit') : t('form.titleNew')}</h2></div><button className="modal-close" type="button" aria-label={t('form.close')} onClick={() => setFormOpen(false)}>×</button></div>
+          <p className="modal-intro">{t('form.intro')}</p>
           <form className="entry-form" onSubmit={addEntry} key={editingEntry?.id ?? 'new'}>
-            <label>Country<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>Choose a country</option>{countries.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{country.name}</option>)}</select></label>
-            <div className="city-field"><label>City<input name="city" type="text" placeholder="Where did you go?" value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label="Suggested cities"><span>{formCity ? 'Suggestions' : 'Popular here'}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
-            <div className="form-row"><label>When <span className="optional">OPTIONAL</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>A little note <span className="optional">OPTIONAL</span><input name="note" type="text" placeholder="A moment to remember…" defaultValue={editingEntry?.note} maxLength={120} /></label></div>
-            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>Maybe later</button><button className="save-button" type="submit">{editingEntry ? 'Save changes' : 'Save this place'} <span>↗</span></button></div>
-            <div className="privacy-note"><span>i</span> {userEmail ? 'Private to your account and synced across devices.' : 'Saved only in this browser until you sign in.'}</div>
+            <label>{t('form.country')}<select name="country" value={formCountry} onChange={(event) => setFormCountry(event.target.value)} required><option value="" disabled>{t('form.chooseCountry')}</option>{countryOptions.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{countryLabel(country.id, locale)}</option>)}</select></label>
+            <div className="city-field"><label>{t('form.city')}<input name="city" type="text" placeholder={t('form.cityPlaceholder')} value={formCity} onChange={(event) => setFormCity(event.target.value)} autoComplete="off" required maxLength={80} /></label>{suggestions.length > 0 && <div className="city-chips" aria-label={t('form.suggested')}><span>{formCity ? t('form.suggestions') : t('form.popular')}</span>{suggestions.map((city) => <button type="button" key={city} className={city === formCity ? 'chip chip-on' : 'chip'} onClick={() => setFormCity(city)}>{city}</button>)}</div>}</div>
+            <div className="form-row"><label>{t('form.when')} <span className="optional">{t('form.optional')}</span><input name="date" type="date" defaultValue={editingEntry?.date} /></label><label>{t('form.note')} <span className="optional">{t('form.optional')}</span><input name="note" type="text" placeholder={t('form.notePlaceholder')} defaultValue={editingEntry?.note} maxLength={120} /></label></div>
+            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setFormOpen(false)}>{t('form.cancel')}</button><button className="save-button" type="submit">{editingEntry ? t('form.saveEdit') : t('form.saveNew')} <span>↗</span></button></div>
+            <div className="privacy-note"><span>i</span> {userEmail ? t('form.privacyCloud') : t('form.privacyLocal')}</div>
           </form>
         </section>
       </div>}

@@ -603,3 +603,12 @@ html[data-theme='dark'] .gps-button { background: #6a49f0; }
 .near-me-note .near-me-main { display: inline; margin: 0; font-size: inherit; opacity: 1; }
 .near-me-note span:not(.near-me-main) { display: block; }
 .summary-chip span { margin-left: 4px; }
+
+/* Language toggle + Schengen permit picker */
+.lang-toggle { font: 800 12px var(--sans, inherit); letter-spacing: .04em; }
+.permit-row { display: grid; max-width: 420px; }
+.permit-row label { display: grid; gap: 6px; color: var(--ink); font-size: 13px; font-weight: 700; }
+.permit-row select { min-height: 46px; padding: 0 14px; border: 2px solid #ece6f7; border-radius: 14px; outline: none; color: var(--ink); background: #fff; font-size: 15px; font-weight: 500; }
+.permit-row select:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
+@media (max-width: 760px) { .permit-row { max-width: none; } .permit-row select { font-size: 16px; } }
+html[data-theme='dark'] .permit-row select { background: var(--raise); border-color: #3d3770; color: var(--ink); }

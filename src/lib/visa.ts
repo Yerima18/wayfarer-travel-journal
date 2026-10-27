@@ -1,18 +1,19 @@
 import { countries } from './countries'
 import { flagCode } from './flags'
+import { isSchengen } from './schengen'
 import passportCodes from './visaPassports.json'
 
 export type VisaStatus = 'self' | 'free' | 'arrival' | 'evisa' | 'required' | 'banned' | 'unknown'
-export type VisaInfo = { status: VisaStatus; days?: number }
+export type VisaInfo = { status: VisaStatus; days?: number; permit?: boolean; resident?: boolean }
 
-export const STATUS_META: Record<VisaStatus, { label: string; color: string; rank: number }> = {
-  self: { label: 'Your passport’s country', color: '#0b7a6e', rank: 0 },
-  free: { label: 'Visa-free', color: '#19b8a6', rank: 1 },
-  arrival: { label: 'Visa on arrival', color: '#ffb627', rank: 2 },
-  evisa: { label: 'e-Visa / travel authorisation', color: '#7c5cff', rank: 3 },
-  required: { label: 'Visa required', color: '#ff6b57', rank: 4 },
-  banned: { label: 'Entry not permitted', color: '#6e7391', rank: 5 },
-  unknown: { label: 'No data', color: '', rank: 6 },
+export const STATUS_META: Record<VisaStatus, { color: string; rank: number }> = {
+  self: { color: '#0b7a6e', rank: 0 },
+  free: { color: '#19b8a6', rank: 1 },
+  arrival: { color: '#ffb627', rank: 2 },
+  evisa: { color: '#7c5cff', rank: 3 },
+  required: { color: '#ff6b57', rank: 4 },
+  banned: { color: '#6e7391', rank: 5 },
+  unknown: { color: '', rank: 6 },
 }
 
 // Codes written by scripts/build-visa-data.mjs: f<days> / f, o, e, v, n, s.
@@ -27,16 +28,12 @@ export function parseVisa(code: string | undefined): VisaInfo {
   return { status: 'unknown' }
 }
 
-export function describeVisa(info: VisaInfo): string {
-  switch (info.status) {
-    case 'self': return 'This is your own country.'
-    case 'free': return info.days ? `Visa-free for up to ${info.days} days.` : 'Visa-free entry.'
-    case 'arrival': return 'You get a visa when you arrive.'
-    case 'evisa': return 'Apply online (e-visa or electronic travel authorisation) before you travel.'
-    case 'required': return 'You need to get a visa before you travel.'
-    case 'banned': return 'Entry is not permitted for this passport.'
-    default: return 'We have no visa data for this one.'
-  }
+/** Upgrades a destination to visa-free when a Schengen residence permit covers it. */
+export function applyPermit(info: VisaInfo, destCode: string | null, permitCode: string | null): VisaInfo {
+  if (!destCode || !isSchengen(permitCode) || !isSchengen(destCode) || info.status === 'self') return info
+  if (destCode === permitCode) return { status: 'free', permit: true, resident: true }
+  if (info.status === 'free' && (info.days ?? 90) >= 90) return info
+  return { status: 'free', days: 90, permit: true }
 }
 
 const available = new Set<string>(passportCodes)

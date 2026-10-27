@@ -6,10 +6,14 @@ import WorldMap from './WorldMap'
 import { countries } from '@/lib/countries'
 import { flagCode, flagEmoji } from '@/lib/flags'
 import centroids from '@/lib/centroids.json'
+import { useI18n } from '@/lib/i18n'
+import type { MessageKey } from '@/lib/messages'
+import { countryLabel, sortedCountries } from '@/lib/names'
 import { countryAt, distancesFrom, loadShapes, type Shapes } from '@/lib/nearby'
+import { isSchengen } from '@/lib/schengen'
 import {
   STATUS_META,
-  describeVisa,
+  applyPermit,
   parseVisa,
   passportCountries,
   type VisaInfo,
@@ -17,6 +21,7 @@ import {
 } from '@/lib/visa'
 
 const PASSPORT_KEY = 'wayfarer.passport'
+const PERMIT_KEY = 'wayfarer.permit'
 
 type ExploreProps = {
   visitedCountryIds: string[]
@@ -26,25 +31,31 @@ type ExploreProps = {
 type Row = { id: string; name: string; info: VisaInfo }
 type RowWithDistance = Row & { km: number | null }
 type Origin = { lat: number; lon: number }
-const GPS = '__gps'
 type Filter = 'all' | 'easy' | VisaStatus
 type Sort = 'easiest' | 'closest' | 'az'
+const GPS = '__gps'
 
-function formatKm(km: number) {
-  return `${(km < 1000 ? Math.round(km / 10) * 10 : Math.round(km / 50) * 50).toLocaleString('en')} km`
-}
-
-function readSavedPassport() {
+function readSaved(key: string, allowed: (id: string) => boolean) {
   try {
-    const saved = window.localStorage.getItem(PASSPORT_KEY)
-    return saved && passportCountries.some((country) => country.id === saved) ? saved : ''
+    const saved = window.localStorage.getItem(key)
+    return saved && allowed(saved) ? saved : ''
   } catch {
     return ''
   }
 }
 
+function save(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // The choice still applies for this visit if browser storage is unavailable.
+  }
+}
+
 export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps) {
-  const [passportId, setPassportId] = useState(readSavedPassport)
+  const { locale, t } = useI18n()
+  const [passportId, setPassportId] = useState(() => readSaved(PASSPORT_KEY, (id) => passportCountries.some((country) => country.id === id)))
+  const [permitId, setPermitId] = useState(() => readSaved(PERMIT_KEY, (id) => isSchengen(flagCode(id))))
   const [fetched, setFetched] = useState<{ id: string; data: Record<string, string> | null } | null>(null)
   const [filter, setFilter] = useState<Filter>('easy')
   const [sort, setSort] = useState<Sort>('easiest')
@@ -77,12 +88,37 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
     setPassportId(id)
     setSelectedId(null)
     setLocationId((current) => (current === GPS ? current : ''))
-    try {
-      window.localStorage.setItem(PASSPORT_KEY, id)
-    } catch {
-      // The choice still applies for this visit if browser storage is unavailable.
-    }
+    save(PASSPORT_KEY, id)
   }
+
+  function choosePermit(id: string) {
+    setPermitId(id)
+    save(PERMIT_KEY, id)
+  }
+
+  const label = (id: string) => countryLabel(id, locale)
+  const flagged = (id: string) => `${flagEmoji(id) ? `${flagEmoji(id)} ` : ''}${label(id)}`
+  const formatKm = (km: number) => `${(km < 1000 ? Math.round(km / 10) * 10 : Math.round(km / 50) * 50).toLocaleString(locale)} km`
+  const statusLabel = (info: VisaInfo) => info.resident ? t('status.resident') : info.permit ? t('status.permit') : t(`status.${info.status}` as MessageKey)
+  const describe = (info: VisaInfo) => {
+    if (info.resident) return t('visa.resident')
+    if (info.permit) return t('visa.permit')
+    if (info.status === 'free') return info.days ? t('visa.freeDays', { n: info.days }) : t('visa.free')
+    return t(`visa.${info.status}` as MessageKey)
+  }
+  const rowStatus = (info: VisaInfo) => {
+    if (info.resident) return t('status.resident')
+    if (info.permit) return `${t('status.permitShort')}${info.days ? ` · ${t('days', { n: info.days })}` : ''}`
+    if (info.status === 'free' && info.days) return t('days', { n: info.days })
+    return statusLabel(info)
+  }
+
+  const passportOptions = useMemo(
+    () => [...passportCountries].sort((a, b) => countryLabel(a.id, locale).localeCompare(countryLabel(b.id, locale), locale)),
+    [locale],
+  )
+  const permitOptions = useMemo(() => sortedCountries(locale).filter((country) => isSchengen(flagCode(country.id))), [locale])
+  const allCountries = useMemo(() => sortedCountries(locale), [locale])
 
   const visited = useMemo(() => new Set(visitedCountryIds), [visitedCountryIds])
   const loaded = fetched && fetched.id === passportId ? fetched : null
@@ -92,12 +128,13 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
 
   const rows = useMemo<Row[]>(() => {
     if (!data) return []
+    const permitCode = permitId ? flagCode(permitId) : null
     return countries.map((country) => {
       const code = flagCode(country.id)
-      const info = country.id === passportId ? { status: 'self' as const } : parseVisa(code ? data[code.toUpperCase()] : undefined)
-      return { id: country.id, name: country.name, info }
+      const base = country.id === passportId ? { status: 'self' as const } : parseVisa(code ? data[code.toUpperCase()] : undefined)
+      return { id: country.id, name: countryLabel(country.id, locale), info: applyPermit(base, code, permitCode) }
     })
-  }, [data, passportId])
+  }, [data, passportId, permitId, locale])
 
   const counts = useMemo(() => {
     const total: Record<string, number> = { free: 0, arrival: 0, evisa: 0, required: 0, banned: 0, unknown: 0 }
@@ -142,13 +179,13 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
     })
     const far = Number.POSITIVE_INFINITY
     return matches.sort((a, b) => {
-      if (sort === 'az') return a.name.localeCompare(b.name)
+      if (sort === 'az') return a.name.localeCompare(b.name, locale)
       if (sort === 'closest') return (a.km ?? far) - (b.km ?? far)
       return STATUS_META[a.info.status].rank - STATUS_META[b.info.status].rank
         || (b.info.days ?? 0) - (a.info.days ?? 0)
         || (a.km ?? far) - (b.km ?? far)
     })
-  }, [rows, filter, sort, query, maxKm, distances, hereId])
+  }, [rows, filter, sort, query, maxKm, distances, hereId, locale])
 
   function locateMe() {
     if (!('geolocation' in navigator)) {
@@ -173,40 +210,41 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
     if (id) setSort('closest')
   }
 
-  const hereName = hereId ? countries.find((country) => country.id === hereId)?.name : undefined
+  const hereName = hereId ? label(hereId) : undefined
   const locationNote = gpsStatus === 'locating'
-    ? 'Finding you…'
+    ? t('near.finding')
     : gpsStatus === 'error'
-      ? 'Couldn’t get your location. Allow location access in your browser, or pick the country you’re in.'
+      ? t('near.noteError')
       : locationId === GPS
-        ? hereName ? `You’re in ${hereName}.` : 'You’re outside every country on the map, so distances are from your exact spot.'
-        : 'Distances are straight-line to each country’s nearest border. Use your location for exact numbers.'
+        ? hereName ? t('near.noteIn', { name: hereName }) : t('near.noteOutside')
+        : t('near.noteDefault')
 
   const selected = selectedId ? rows.find((row) => row.id === selectedId) : undefined
   const passport = passportCountries.find((country) => country.id === passportId)
+  const passportName = passport ? label(passport.id) : ''
 
   const filters: { key: Filter; label: string; count: number }[] = [
-    { key: 'easy', label: 'Easy to enter', count: counts.free + counts.arrival },
-    { key: 'free', label: 'Visa-free', count: counts.free },
-    { key: 'arrival', label: 'On arrival', count: counts.arrival },
-    { key: 'evisa', label: 'e-Visa', count: counts.evisa },
-    { key: 'required', label: 'Visa required', count: counts.required },
-    { key: 'all', label: 'Everything', count: rows.length - 1 },
+    { key: 'easy', label: t('filter.easy'), count: counts.free + counts.arrival },
+    { key: 'free', label: t('filter.free'), count: counts.free },
+    { key: 'arrival', label: t('filter.arrival'), count: counts.arrival },
+    { key: 'evisa', label: t('filter.evisa'), count: counts.evisa },
+    { key: 'required', label: t('filter.required'), count: counts.required },
+    { key: 'all', label: t('filter.all'), count: rows.length - 1 },
   ]
 
   return (
     <section className="explore" aria-labelledby="explore-heading">
       <div className="places-head">
         <div>
-          <div className="overline"><span className="overline-line" /> PASSPORT CHECKER</div>
-          <h1 id="explore-heading">Where can you <em>go?</em> 🧭</h1>
-          <p>Pick your passport and see which countries are easy to enter.</p>
+          <div className="overline"><span className="overline-line" /> {t('explore.overline')}</div>
+          <h1 id="explore-heading">{t('explore.h1a')} <em>{t('explore.h1b')}</em> 🧭</h1>
+          <p>{t('explore.intro')}</p>
         </div>
         <label className="passport-picker">
-          <span>My passport</span>
+          <span>{t('explore.passport')}</span>
           <select value={passportId} onChange={(event) => choosePassport(event.target.value)}>
-            <option value="">Choose a country</option>
-            {passportCountries.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{country.name}</option>)}
+            <option value="">{t('explore.choose')}</option>
+            {passportOptions.map((country) => <option value={country.id} key={country.id}>{flagged(country.id)}</option>)}
           </select>
         </label>
       </div>
@@ -214,40 +252,53 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
       {!passportId && (
         <div className="panel places-empty">
           <div className="empty-pin"><span aria-hidden="true">🛂</span></div>
-          <h3>Which passport do you hold?</h3>
-          <p>Choose it above and the map will light up with every country you can visit easily. We remember your choice on this device.</p>
+          <h3>{t('explore.emptyTitle')}</h3>
+          <p>{t('explore.emptyText')}</p>
         </div>
       )}
 
-      {loading && <div className="panel places-empty"><p>Loading visa rules…</p></div>}
-      {failed && <div className="panel places-empty"><h3>Couldn’t load the rules</h3><p>Check your connection and pick your passport again.</p></div>}
+      {loading && <div className="panel places-empty"><p>{t('explore.loading')}</p></div>}
+      {failed && <div className="panel places-empty"><h3>{t('explore.failedTitle')}</h3><p>{t('explore.failedText')}</p></div>}
 
       {data && passport && (
         <>
           <div className="near-me panel">
-            <div className="near-me-head"><span aria-hidden="true">📍</span><h2>Near me</h2></div>
-            <div className="near-me-controls">
-              <label>I’m in
-                <select value={locationId} onChange={(event) => chooseLocation(event.target.value)}>
-                  <option value="">My passport’s country ({passport.name})</option>
-                  {gps && <option value={GPS}>📍 My current location</option>}
-                  {countries.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{country.name}</option>)}
-                </select>
-              </label>
-              <button type="button" className="gps-button" onClick={locateMe} disabled={gpsStatus === 'locating'}>{gpsStatus === 'locating' ? 'Finding you…' : '📍 Use my location'}</button>
-              <label>Within
-                <select value={maxKm} onChange={(event) => setMaxKm(Number(event.target.value))}>
-                  <option value={0}>Any distance</option>
-                  <option value={500}>500 km</option>
-                  <option value={1500}>1,500 km</option>
-                  <option value={3000}>3,000 km</option>
+            <div className="near-me-head"><span aria-hidden="true">🪪</span><h2>{t('permit.title')}</h2></div>
+            <div className="permit-row">
+              <label>{t('permit.label')}
+                <select value={permitId} onChange={(event) => choosePermit(event.target.value)}>
+                  <option value="">{t('permit.none')}</option>
+                  {permitOptions.map((country) => <option value={country.id} key={country.id}>{flagged(country.id)}</option>)}
                 </select>
               </label>
             </div>
-            <p className="near-me-note" role="status"><span className="near-me-main">{locationNote}</span><span>Your location stays in this browser and is never saved or sent anywhere.</span></p>
+            <p className="near-me-note"><span className="near-me-main">{t('permit.hint')}</span></p>
           </div>
 
-          <div className="explore-summary" role="group" aria-label="Filter countries by entry rule">
+          <div className="near-me panel">
+            <div className="near-me-head"><span aria-hidden="true">📍</span><h2>{t('near.title')}</h2></div>
+            <div className="near-me-controls">
+              <label>{t('near.imIn')}
+                <select value={locationId} onChange={(event) => chooseLocation(event.target.value)}>
+                  <option value="">{t('near.passportCountry', { name: passportName })}</option>
+                  {gps && <option value={GPS}>{t('near.currentLocation')}</option>}
+                  {allCountries.map((country) => <option value={country.id} key={country.id}>{flagged(country.id)}</option>)}
+                </select>
+              </label>
+              <button type="button" className="gps-button" onClick={locateMe} disabled={gpsStatus === 'locating'}>{gpsStatus === 'locating' ? t('near.finding') : t('near.useLocation')}</button>
+              <label>{t('near.within')}
+                <select value={maxKm} onChange={(event) => setMaxKm(Number(event.target.value))}>
+                  <option value={0}>{t('near.any')}</option>
+                  <option value={500}>{`500 km`}</option>
+                  <option value={1500}>{`${(1500).toLocaleString(locale)} km`}</option>
+                  <option value={3000}>{`${(3000).toLocaleString(locale)} km`}</option>
+                </select>
+              </label>
+            </div>
+            <p className="near-me-note" role="status"><span className="near-me-main">{locationNote}</span><span>{t('near.privacy')}</span></p>
+          </div>
+
+          <div className="explore-summary" role="group" aria-label={t('explore.filterAria')}>
             {filters.map((item) => (
               <button type="button" key={item.key} className={filter === item.key ? 'summary-chip summary-chip-on' : 'summary-chip'} onClick={() => setFilter(item.key)}>
                 <strong>{item.count}</strong><span>{item.label}</span>
@@ -258,7 +309,7 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
           <div className="content-grid">
             <article className="panel map-panel" aria-labelledby="explore-map-heading">
               <div className="panel-heading">
-                <div><div className="panel-kicker">{`WITH A ${passport.name.toUpperCase()} PASSPORT`}</div><h2 id="explore-map-heading">Your open doors</h2></div>
+                <div><div className="panel-kicker">{t('explore.mapKicker', { name: passportName.toUpperCase() })}</div><h2 id="explore-map-heading">{t('explore.mapTitle')}</h2></div>
               </div>
               <WorldMap
                 visitedCountryIds={visitedCountryIds}
@@ -266,40 +317,43 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
                 selectedId={selectedId}
                 pin={locationId === GPS ? gps : null}
                 onSelectCountry={setSelectedId}
-                describe={(id) => STATUS_META[rows.find((row) => row.id === id)?.info.status ?? 'unknown'].label}
+                describe={(id) => {
+                  const row = rows.find((item) => item.id === id)
+                  return row ? statusLabel(row.info) : t('status.unknown')
+                }}
               />
               <ul className="visa-legend">
                 {(['free', 'arrival', 'evisa', 'required', 'banned'] as const).map((status) => (
-                  <li key={status}><span style={{ background: STATUS_META[status].color }} />{STATUS_META[status].label}</li>
+                  <li key={status}><span style={{ background: STATUS_META[status].color }} />{t(`status.${status}` as MessageKey)}</li>
                 ))}
               </ul>
             </article>
 
             <article className="panel recent-panel explore-list" aria-labelledby="explore-list-heading">
               <div className="panel-heading recent-heading">
-                <div><div className="panel-kicker">{`${listed.length} ${listed.length === 1 ? 'COUNTRY' : 'COUNTRIES'}`}</div><h2 id="explore-list-heading">Where to next</h2></div>
+                <div><div className="panel-kicker">{t('explore.count', { n: listed.length })}</div><h2 id="explore-list-heading">{t('explore.listTitle')}</h2></div>
               </div>
               <div className="explore-tools">
-                <input type="search" placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search a country" />
-                <select value={sort} onChange={(event) => setSort(event.target.value as Sort)} aria-label="Sort countries">
-                  <option value="easiest">Easiest first</option>
-                  <option value="closest">{locationId === GPS ? 'Closest to me' : `Closest to ${hereName ?? passport.name}`}</option>
-                  <option value="az">A to Z</option>
+                <input type="search" placeholder={t('explore.search')} value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t('explore.searchAria')} />
+                <select value={sort} onChange={(event) => setSort(event.target.value as Sort)} aria-label={t('explore.sortAria')}>
+                  <option value="easiest">{t('explore.sortEasiest')}</option>
+                  <option value="closest">{locationId === GPS ? t('explore.sortClosestMe') : t('explore.sortClosestPlace', { name: hereName ?? passportName })}</option>
+                  <option value="az">{t('explore.sortAz')}</option>
                 </select>
               </div>
 
               {selected && (
-                <div className="visa-detail" role="region" aria-label={`Entry rules for ${selected.name}`}>
+                <div className="visa-detail" role="region" aria-label={t('explore.detailAria', { name: selected.name })}>
                   <div className="visa-detail-head">
                     <Flag countryId={selected.id} className="flag flag-large" />
                     <h3>{selected.name}</h3>
-                    <button type="button" className="visa-detail-close" onClick={() => setSelectedId(null)} aria-label="Close details">×</button>
+                    <button type="button" className="visa-detail-close" onClick={() => setSelectedId(null)} aria-label={t('explore.closeDetail')}>×</button>
                   </div>
-                  <div className="visa-status"><span style={{ background: STATUS_META[selected.info.status].color || '#cbbf9c' }} />{STATUS_META[selected.info.status].label}</div>
-                  <p>{describeVisa(selected.info)}</p>
-                  {kmTo(selected.id) !== null && <p className="visa-distance">{kmTo(selected.id) === 0 ? 'You’re here right now.' : `About ${formatKm(kmTo(selected.id) ?? 0)} from you, in a straight line.`}</p>}
-                  {visited.has(selected.id) && <p className="visa-visited">📍 You’ve been here.</p>}
-                  {selected.info.status !== 'self' && <button type="button" className="empty-add" onClick={() => onAddPlace(selected.id)}>Add to my journal <span>↗</span></button>}
+                  <div className="visa-status"><span style={{ background: STATUS_META[selected.info.status].color || '#cbbf9c' }} />{statusLabel(selected.info)}</div>
+                  <p>{describe(selected.info)}</p>
+                  {kmTo(selected.id) !== null && <p className="visa-distance">{kmTo(selected.id) === 0 ? t('near.hereNow') : t('near.about', { km: formatKm(kmTo(selected.id) ?? 0) })}</p>}
+                  {visited.has(selected.id) && <p className="visa-visited">{t('explore.visited')}</p>}
+                  {selected.info.status !== 'self' && <button type="button" className="empty-add" onClick={() => onAddPlace(selected.id)}>{t('explore.addToJournal')} <span>↗</span></button>}
                 </div>
               )}
 
@@ -310,22 +364,18 @@ export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps)
                       <Flag countryId={row.id} className="flag flag-small" />
                       <span className="visa-row-name">{visited.has(row.id) ? `${row.name} 📍` : row.name}</span>
                       <span className="visa-row-meta">
-                        <span className="visa-row-status"><i style={{ background: STATUS_META[row.info.status].color || '#cbbf9c' }} />{row.info.status === 'free' && row.info.days ? `${row.info.days} days` : STATUS_META[row.info.status].label}</span>
-                        {row.km !== null && <span className="visa-row-dist">{row.km === 0 ? 'You’re here' : formatKm(row.km)}</span>}
+                        <span className="visa-row-status"><i style={{ background: STATUS_META[row.info.status].color || '#cbbf9c' }} />{rowStatus(row.info)}</span>
+                        {row.km !== null && <span className="visa-row-dist">{row.km === 0 ? t('near.here') : formatKm(row.km)}</span>}
                       </span>
                     </button>
                   </li>
                 ))}
-                {listed.length === 0 && <li className="visa-empty">Nothing matches. Try another filter.</li>}
+                {listed.length === 0 && <li className="visa-empty">{t('explore.nothing')}</li>}
               </ul>
             </article>
           </div>
 
-          <p className="visa-disclaimer">
-            Visa data comes from the open Passport Index dataset and was last updated in January 2025. Rules change often and some stays depend on how you travel,
-            so always confirm with the official government or embassy website before you book. Distances are straight lines to the nearest border, not travel routes or times,
-            and if you live somewhere on a residence permit you may have easier entry than your passport shows.
-          </p>
+          <p className="visa-disclaimer">{t('explore.disclaimer')}</p>
         </>
       )}
     </section>

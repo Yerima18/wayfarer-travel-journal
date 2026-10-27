@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { countries } from '@/lib/countries'
 import Flag from './Flag'
+import { useI18n } from '@/lib/i18n'
+import { countryLabel } from '@/lib/names'
 import { ComposableMap, Geographies, Geography, Graticule, Marker, Sphere } from 'react-simple-maps'
 
 type WorldMapProps = {
@@ -26,6 +28,7 @@ function colorFor(id: string) {
 }
 
 export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, describe, selectedId, pin }: WorldMapProps) {
+  const { locale, t } = useI18n()
   const visited = new Set(visitedCountryIds)
   const [hovered, setHovered] = useState<{ id: string; name: string; visited: boolean; canAdd: boolean } | null>(null)
 
@@ -33,10 +36,10 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, de
     <div className="map-frame">
       <div className={hovered ? 'map-tip map-tip-on' : 'map-tip'} aria-hidden="true">
         {hovered?.canAdd ? <Flag countryId={hovered.id} className="flag flag-small" /> : null}
-        <span>{hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ` · ${describe ? describe(hovered.id) : 'click to add a place'}` : ''}` : 'Point at a country'}</span>
+        <span>{hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ` · ${describe ? describe(hovered.id) : t('map.clickToAdd')}` : ''}` : t('map.point')}</span>
       </div>
       <ComposableMap
-        aria-label="World map showing countries in your travel journal"
+        aria-label={t('map.aria')}
         className="world-map"
         projection="geoEqualEarth"
         projectionConfig={{ scale: 155, center: [0, 4] }}
@@ -51,7 +54,7 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, de
             const isVisited = visited.has(id)
             const canAdd = selectableIds.has(id)
             const painted = fills?.[id]
-            const hover = { id, name: String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
+            const hover = { id, name: canAdd ? countryLabel(id, locale) : String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
             return (
               <Geography
                 key={geography.rsmKey}
