@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
 import Flag from '@/components/Flag'
+import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
 import { citySuggestions } from '@/lib/cities'
 import { flagEmoji } from '@/lib/flags'
@@ -419,7 +420,7 @@ function App() {
       <div className="main-column" id="overview">
         <header className="topbar">
           <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>{view === 'overview' ? 'OVERVIEW' : 'MY PLACES'}</b></div>
-          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span>{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button></div>
+          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button></div>
         </header>
 
         <main className="dashboard">

@@ -15,3 +15,11 @@
 .error,.message{margin:0;font-size:12px;line-height:1.5}
 .error{color:#c0301e}.message{color:#1c7c70}
 @media(max-width:520px){.dialog{padding:34px 24px}.dialog h2{font-size:29px}.form input{font-size:16px}}
+:global(html[data-theme='dark']) .dialog{background:#1e1a3b;border:1px solid #352f63;box-shadow:0 28px 90px rgba(0,0,0,.6)}
+:global(html[data-theme='dark']) .close{background:#2f2a5c;color:#b6a3ff}
+:global(html[data-theme='dark']) .dialog h2,:global(html[data-theme='dark']) .form label{color:#f3f0ff}
+:global(html[data-theme='dark']) .intro{color:#b8b1da}
+:global(html[data-theme='dark']) .form input{background:#272250;border-color:#3d3770;color:#f3f0ff}
+:global(html[data-theme='dark']) .switch{color:#b6a3ff}
+:global(html[data-theme='dark']) .error{color:#ff9a86}
+:global(html[data-theme='dark']) .message{color:#7fe3d3}

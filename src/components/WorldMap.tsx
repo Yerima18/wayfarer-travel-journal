@@ -36,8 +36,8 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry }: WorldMa
         width={800}
         height={390}
       >
-        <Sphere fill="#d9f0ff" stroke="#b6dcf5" strokeWidth={1} />
-        <Graticule stroke="#c4e4f8" strokeWidth={0.45} step={[20, 20]} />
+        <Sphere className="map-sphere" fill="#d9f0ff" stroke="#b6dcf5" strokeWidth={1} />
+        <Graticule className="map-graticule" stroke="#c4e4f8" strokeWidth={0.45} step={[20, 20]} />
         <Geographies geography="/countries-110m.json">
           {({ geographies }) => geographies.map((geography) => {
             const id = String(geography.id)

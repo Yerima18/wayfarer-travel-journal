@@ -10,11 +10,14 @@ export const metadata: Metadata = {
 // later updates them and blanks the page. Ignoring those stale-node calls keeps translated pages alive.
 const translateGuard = `(function(){var n=Node.prototype,r=n.removeChild,i=n.insertBefore;n.removeChild=function(c){if(c&&c.parentNode!==this){return c}return r.apply(this,arguments)};n.insertBefore=function(c,f){if(f&&f.parentNode!==this){return c}return i.apply(this,arguments)}})();`
 
+// Runs before first paint so the saved (or system) theme is applied without a flash.
+const themeInit = `(function(){try{var t=localStorage.getItem('wayfarer.theme');if(!t){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){}})();`
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: translateGuard }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInit + translateGuard }} />
       </head>
       <body>{children}</body>
     </html>

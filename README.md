@@ -7,6 +7,7 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 ## Features
 
 - Interactive world map that highlights every country you have visited
+- Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)
 - Works instantly with no account: your journal is saved in your browser
