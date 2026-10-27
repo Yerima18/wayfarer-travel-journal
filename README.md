@@ -7,6 +7,7 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 ## Features
 
 - Interactive world map that highlights every country you have visited
+- Passport checker (Explore tab): pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa; sort by easiest or closest and add any country to your journal
 - Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)
@@ -111,3 +112,15 @@ pnpm build   # production build
 pnpm start   # run the production build
 pnpm lint    # run ESLint
 ```
+
+## Visa data
+
+The Explore tab uses the open [passport-index-dataset](https://github.com/ilyankou/passport-index-dataset) (MIT). It was last updated in **January 2025**, so treat it as a guide and always confirm with the official government or embassy website before booking.
+
+To refresh it, download `passport-index-matrix-iso2.csv` from that repository and run:
+
+```bash
+node scripts/build-visa-data.mjs path/to/passport-index-matrix-iso2.csv path/to/folder-with-d3-geo-and-topojson-client
+```
+
+The script writes one small file per passport to `public/visa/` and the country centres in `src/lib/centroids.json`. The last argument is a folder where `d3-geo` and `topojson-client` are installed (needed only for the centres).

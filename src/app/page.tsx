@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
+import Explore from '@/components/Explore'
 import Flag from '@/components/Flag'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
@@ -50,6 +51,15 @@ function PinIcon({ small = false }: { small?: boolean }) {
   )
 }
 
+function CompassIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function AppMark() {
   return (
     <svg aria-hidden="true" viewBox="0 0 32 32" fill="none">
@@ -66,7 +76,7 @@ function App() {
   const [storageWarning, setStorageWarning] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [view, setView] = useState<'overview' | 'places'>('overview')
+  const [view, setView] = useState<'overview' | 'places' | 'explore'>('overview')
   const [formCountry, setFormCountry] = useState('')
   const [formCity, setFormCity] = useState('')
   const [showAll, setShowAll] = useState(false)
@@ -406,6 +416,7 @@ function App() {
         <nav className="side-nav" aria-label="Journal navigation">
           <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />Overview</button>
           <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>My places<span className="nav-count">{entries.length}</span></button>
+          <button className={view === 'explore' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'explore' ? 'page' : undefined} onClick={() => setView('explore')}><span className="nav-glyph"><CompassIcon /></span>Explore</button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -419,13 +430,15 @@ function App() {
 
       <div className="main-column" id="overview">
         <header className="topbar">
-          <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>{view === 'overview' ? 'OVERVIEW' : 'MY PLACES'}</b></div>
+          <div className="breadcrumb"><span>YOUR ATLAS</span><i>/</i><b>{view === 'overview' ? 'OVERVIEW' : view === 'places' ? 'MY PLACES' : 'EXPLORE'}</b></div>
           <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{userEmail ? cloudStatus === 'syncing' ? ' Syncing your journal' : cloudStatus === 'error' ? ' Sync issue — check your connection' : ' Synced to your account' : storageWarning ? ' Saved data preserved; changes stay in this session' : ' Saved on this device'}</span><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>Sign out</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>Sign in</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> Add a place</button></div>
         </header>
 
         <main className="dashboard">
           {importAvailable && <div className="import-notice" role="status"><span>Your browser has {localEntriesSnapshot.length} saved {localEntriesSnapshot.length === 1 ? 'place' : 'places'} that are not in this account yet.</span><button type="button" onClick={importLocalJournal}>Import browser journal</button></div>}
-          {view === 'places' ? (
+          {view === 'explore' ? (
+            <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} />
+          ) : view === 'places' ? (
           <section className="places-view" aria-labelledby="places-page-heading">
             <div className="places-head">
               <div>

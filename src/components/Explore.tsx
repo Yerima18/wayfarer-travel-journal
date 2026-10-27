@@ -1,0 +1,234 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import Flag from './Flag'
+import WorldMap from './WorldMap'
+import { countries } from '@/lib/countries'
+import { flagCode, flagEmoji } from '@/lib/flags'
+import {
+  STATUS_META,
+  describeVisa,
+  distanceKm,
+  parseVisa,
+  passportCountries,
+  type VisaInfo,
+  type VisaStatus,
+} from '@/lib/visa'
+
+const PASSPORT_KEY = 'wayfarer.passport'
+
+type ExploreProps = {
+  visitedCountryIds: string[]
+  onAddPlace: (countryId: string) => void
+}
+
+type Row = { id: string; name: string; info: VisaInfo; distance: number }
+type Filter = 'all' | 'easy' | VisaStatus
+type Sort = 'easiest' | 'closest' | 'az'
+
+function readSavedPassport() {
+  try {
+    const saved = window.localStorage.getItem(PASSPORT_KEY)
+    return saved && passportCountries.some((country) => country.id === saved) ? saved : ''
+  } catch {
+    return ''
+  }
+}
+
+export default function Explore({ visitedCountryIds, onAddPlace }: ExploreProps) {
+  const [passportId, setPassportId] = useState(readSavedPassport)
+  const [fetched, setFetched] = useState<{ id: string; data: Record<string, string> | null } | null>(null)
+  const [filter, setFilter] = useState<Filter>('easy')
+  const [sort, setSort] = useState<Sort>('easiest')
+  const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const code = passportId ? flagCode(passportId) : null
+    if (!code) return
+    let active = true
+    fetch(`/visa/${code}.json`)
+      .then((response) => (response.ok ? (response.json() as Promise<Record<string, string>>) : null))
+      .catch(() => null)
+      .then((data) => { if (active) setFetched({ id: passportId, data }) })
+    return () => { active = false }
+  }, [passportId])
+
+  function choosePassport(id: string) {
+    setPassportId(id)
+    setSelectedId(null)
+    try {
+      window.localStorage.setItem(PASSPORT_KEY, id)
+    } catch {
+      // The choice still applies for this visit if browser storage is unavailable.
+    }
+  }
+
+  const visited = useMemo(() => new Set(visitedCountryIds), [visitedCountryIds])
+  const loaded = fetched && fetched.id === passportId ? fetched : null
+  const data = loaded?.data ?? null
+  const loading = Boolean(passportId) && !loaded
+  const failed = Boolean(passportId) && Boolean(loaded) && !data
+
+  const rows = useMemo<Row[]>(() => {
+    if (!data) return []
+    return countries.map((country) => {
+      const code = flagCode(country.id)
+      const info = country.id === passportId ? { status: 'self' as const } : parseVisa(code ? data[code.toUpperCase()] : undefined)
+      return { id: country.id, name: country.name, info, distance: distanceKm(passportId, country.id) }
+    })
+  }, [data, passportId])
+
+  const counts = useMemo(() => {
+    const total: Record<string, number> = { free: 0, arrival: 0, evisa: 0, required: 0, banned: 0, unknown: 0 }
+    rows.forEach((row) => { if (row.info.status !== 'self') total[row.info.status] += 1 })
+    return total
+  }, [rows])
+
+  const fills = useMemo(() => {
+    const colours: Record<string, string> = {}
+    rows.forEach((row) => {
+      const colour = STATUS_META[row.info.status].color
+      if (colour) colours[row.id] = colour
+    })
+    return colours
+  }, [rows])
+
+  const listed = useMemo(() => {
+    const text = query.trim().toLowerCase()
+    const matches = rows.filter((row) => {
+      if (row.info.status === 'self') return false
+      if (text && !row.name.toLowerCase().includes(text)) return false
+      if (filter === 'all') return true
+      if (filter === 'easy') return row.info.status === 'free' || row.info.status === 'arrival'
+      return row.info.status === filter
+    })
+    return matches.sort((a, b) => {
+      if (sort === 'az') return a.name.localeCompare(b.name)
+      if (sort === 'closest') return a.distance - b.distance
+      return STATUS_META[a.info.status].rank - STATUS_META[b.info.status].rank
+        || (b.info.days ?? 0) - (a.info.days ?? 0)
+        || a.distance - b.distance
+    })
+  }, [rows, filter, sort, query])
+
+  const selected = selectedId ? rows.find((row) => row.id === selectedId) : undefined
+  const passport = passportCountries.find((country) => country.id === passportId)
+
+  const filters: { key: Filter; label: string; count: number }[] = [
+    { key: 'easy', label: 'Easy to enter', count: counts.free + counts.arrival },
+    { key: 'free', label: 'Visa-free', count: counts.free },
+    { key: 'arrival', label: 'On arrival', count: counts.arrival },
+    { key: 'evisa', label: 'e-Visa', count: counts.evisa },
+    { key: 'required', label: 'Visa required', count: counts.required },
+    { key: 'all', label: 'Everything', count: rows.length - 1 },
+  ]
+
+  return (
+    <section className="explore" aria-labelledby="explore-heading">
+      <div className="places-head">
+        <div>
+          <div className="overline"><span className="overline-line" /> PASSPORT CHECKER</div>
+          <h1 id="explore-heading">Where can you <em>go?</em> 🧭</h1>
+          <p>Pick your passport and see which countries are easy to enter.</p>
+        </div>
+        <label className="passport-picker">
+          <span>My passport</span>
+          <select value={passportId} onChange={(event) => choosePassport(event.target.value)}>
+            <option value="">Choose a country</option>
+            {passportCountries.map((country) => <option value={country.id} key={country.id}>{flagEmoji(country.id) ? `${flagEmoji(country.id)} ` : ''}{country.name}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {!passportId && (
+        <div className="panel places-empty">
+          <div className="empty-pin"><span aria-hidden="true">🛂</span></div>
+          <h3>Which passport do you hold?</h3>
+          <p>Choose it above and the map will light up with every country you can visit easily. We remember your choice on this device.</p>
+        </div>
+      )}
+
+      {loading && <div className="panel places-empty"><p>Loading visa rules…</p></div>}
+      {failed && <div className="panel places-empty"><h3>Couldn’t load the rules</h3><p>Check your connection and pick your passport again.</p></div>}
+
+      {data && passport && (
+        <>
+          <div className="explore-summary" role="group" aria-label="Filter countries by entry rule">
+            {filters.map((item) => (
+              <button type="button" key={item.key} className={filter === item.key ? 'summary-chip summary-chip-on' : 'summary-chip'} onClick={() => setFilter(item.key)}>
+                <strong>{item.count}</strong> {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="content-grid">
+            <article className="panel map-panel" aria-labelledby="explore-map-heading">
+              <div className="panel-heading">
+                <div><div className="panel-kicker">WITH A {passport.name.toUpperCase()} PASSPORT</div><h2 id="explore-map-heading">Your open doors</h2></div>
+              </div>
+              <WorldMap
+                visitedCountryIds={visitedCountryIds}
+                fills={fills}
+                selectedId={selectedId}
+                onSelectCountry={setSelectedId}
+                describe={(id) => STATUS_META[rows.find((row) => row.id === id)?.info.status ?? 'unknown'].label}
+              />
+              <ul className="visa-legend">
+                {(['free', 'arrival', 'evisa', 'required', 'banned'] as const).map((status) => (
+                  <li key={status}><span style={{ background: STATUS_META[status].color }} />{STATUS_META[status].label}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="panel recent-panel explore-list" aria-labelledby="explore-list-heading">
+              <div className="panel-heading recent-heading">
+                <div><div className="panel-kicker">{listed.length} {listed.length === 1 ? 'COUNTRY' : 'COUNTRIES'}</div><h2 id="explore-list-heading">Where to next</h2></div>
+              </div>
+              <div className="explore-tools">
+                <input type="search" placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search a country" />
+                <select value={sort} onChange={(event) => setSort(event.target.value as Sort)} aria-label="Sort countries">
+                  <option value="easiest">Easiest first</option>
+                  <option value="closest">Closest to {passport.name}</option>
+                  <option value="az">A to Z</option>
+                </select>
+              </div>
+
+              {selected && (
+                <div className="visa-detail" role="region" aria-label={`Entry rules for ${selected.name}`}>
+                  <div className="visa-detail-head">
+                    <Flag countryId={selected.id} className="flag flag-large" />
+                    <h3>{selected.name}</h3>
+                    <button type="button" className="visa-detail-close" onClick={() => setSelectedId(null)} aria-label="Close details">×</button>
+                  </div>
+                  <div className="visa-status"><span style={{ background: STATUS_META[selected.info.status].color || '#cbbf9c' }} />{STATUS_META[selected.info.status].label}</div>
+                  <p>{describeVisa(selected.info)}</p>
+                  {visited.has(selected.id) && <p className="visa-visited">📍 You’ve been here.</p>}
+                  {selected.info.status !== 'self' && <button type="button" className="empty-add" onClick={() => onAddPlace(selected.id)}>Add to my journal <span>↗</span></button>}
+                </div>
+              )}
+
+              <ul className="visa-list">
+                {listed.map((row) => (
+                  <li key={row.id}>
+                    <button type="button" className={row.id === selectedId ? 'visa-row visa-row-on' : 'visa-row'} onClick={() => setSelectedId(row.id)}>
+                      <Flag countryId={row.id} className="flag flag-small" />
+                      <span className="visa-row-name">{row.name}{visited.has(row.id) ? ' 📍' : ''}</span>
+                      <span className="visa-row-status"><i style={{ background: STATUS_META[row.info.status].color || '#cbbf9c' }} />{row.info.status === 'free' && row.info.days ? `${row.info.days} days` : STATUS_META[row.info.status].label}</span>
+                    </button>
+                  </li>
+                ))}
+                {listed.length === 0 && <li className="visa-empty">Nothing matches. Try another filter.</li>}
+              </ul>
+            </article>
+          </div>
+
+          <p className="visa-disclaimer">
+            Visa data comes from the open Passport Index dataset and was last updated in January 2025. Rules change often and some stays depend on how you travel,
+            so always confirm with the official government or embassy website before you book.
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
