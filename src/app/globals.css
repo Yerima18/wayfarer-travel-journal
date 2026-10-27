@@ -578,3 +578,28 @@ html[data-theme='dark'] .visa-row:hover, html[data-theme='dark'] .visa-row-on { 
 
 /* Keep the active tab highlighted (nav items are buttons, whose reset would otherwise win). */
 .nav-link.nav-link-active { background: rgba(255,255,255,.22); color: #fff; }
+
+/* Explore: near me */
+.near-me { margin-bottom: 16px; padding: 16px 18px; }
+.near-me-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.near-me-head h2 { margin: 0; color: var(--ink); font: 600 20px var(--serif); letter-spacing: -.02em; }
+.near-me-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, .8fr); align-items: end; gap: 12px; }
+.near-me-controls label { display: grid; gap: 6px; color: var(--ink); font-size: 13px; font-weight: 700; }
+.near-me-controls select { min-height: 46px; padding: 0 14px; border: 2px solid #ece6f7; border-radius: 14px; outline: none; color: var(--ink); background: #fff; font-size: 15px; font-weight: 500; }
+.near-me-controls select:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
+.gps-button { min-height: 46px; padding: 0 18px; border: 0; border-radius: 999px; color: #fff; background: var(--violet); font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.gps-button:hover:not(:disabled) { background: #6a49f0; transform: translateY(-1px); }
+.gps-button:disabled { opacity: .7; cursor: wait; }
+.near-me-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.near-me-note span { display: block; margin-top: 2px; font-size: 12px; opacity: .85; }
+.visa-row-meta { display: grid; justify-items: end; gap: 2px; flex: 0 0 auto; }
+.visa-row-dist { color: var(--muted); font-size: 12px; font-weight: 600; }
+.visa-distance { color: var(--ink) !important; font-weight: 600; }
+.map-pin { fill: var(--violet); stroke: #fff; stroke-width: 2; }
+.map-pin-ring { fill: rgba(124,92,255,.25); stroke: var(--violet); stroke-width: 1; pointer-events: none; }
+@media (max-width: 760px) { .near-me-controls { grid-template-columns: 1fr; } .gps-button { width: 100%; } .near-me-controls select { font-size: 16px; } }
+html[data-theme='dark'] .near-me-controls select { background: var(--raise); border-color: #3d3770; color: var(--ink); }
+html[data-theme='dark'] .gps-button { background: #6a49f0; }
+.near-me-note .near-me-main { display: inline; margin: 0; font-size: inherit; opacity: 1; }
+.near-me-note span:not(.near-me-main) { display: block; }
+.summary-chip span { margin-left: 4px; }

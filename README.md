@@ -7,7 +7,7 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 ## Features
 
 - Interactive world map that highlights every country you have visited
-- Passport checker (Explore tab): pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa; sort by easiest or closest and add any country to your journal
+- Passport checker (Explore tab): pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa; add "Near me" (use your device location, which never leaves your browser, or pick the country you are in) to see the closest easy destinations with distances, and add any country to your journal
 - Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { countries } from '@/lib/countries'
 import Flag from './Flag'
-import { ComposableMap, Geographies, Geography, Graticule, Sphere } from 'react-simple-maps'
+import { ComposableMap, Geographies, Geography, Graticule, Marker, Sphere } from 'react-simple-maps'
 
 type WorldMapProps = {
   visitedCountryIds: string[]
@@ -13,6 +13,8 @@ type WorldMapProps = {
   /** Text shown after the country name in the hover bubble. Defaults to the "add a place" hint. */
   describe?: (countryId: string) => string
   selectedId?: string | null
+  /** Where the user is, drawn as a pin. */
+  pin?: { lat: number; lon: number } | null
 }
 
 const selectableIds = new Set(countries.map((country) => country.id))
@@ -23,7 +25,7 @@ function colorFor(id: string) {
   return VISITED_COLORS[sum % VISITED_COLORS.length]
 }
 
-export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, describe, selectedId }: WorldMapProps) {
+export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, describe, selectedId, pin }: WorldMapProps) {
   const visited = new Set(visitedCountryIds)
   const [hovered, setHovered] = useState<{ id: string; name: string; visited: boolean; canAdd: boolean } | null>(null)
 
@@ -67,6 +69,12 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, de
             )
           })}
         </Geographies>
+        {pin && (
+          <Marker coordinates={[pin.lon, pin.lat]}>
+            <circle className="map-pin-ring" r={11} />
+            <circle className="map-pin" r={5} />
+          </Marker>
+        )}
       </ComposableMap>
     </div>
   )

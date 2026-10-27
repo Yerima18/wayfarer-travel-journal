@@ -1,7 +1,6 @@
 import { countries } from './countries'
 import { flagCode } from './flags'
 import passportCodes from './visaPassports.json'
-import centroids from './centroids.json'
 
 export type VisaStatus = 'self' | 'free' | 'arrival' | 'evisa' | 'required' | 'banned' | 'unknown'
 export type VisaInfo = { status: VisaStatus; days?: number }
@@ -47,15 +46,3 @@ export const passportCountries = countries.filter((country) => {
   const code = flagCode(country.id)
   return code !== null && available.has(code)
 })
-
-/** Straight-line distance between two country centres, in km. */
-export function distanceKm(aId: string, bId: string): number {
-  const a = (centroids as Record<string, number[]>)[aId]
-  const b = (centroids as Record<string, number[]>)[bId]
-  if (!a || !b) return Number.POSITIVE_INFINITY
-  const rad = Math.PI / 180
-  const dLat = (b[1] - a[1]) * rad
-  const dLon = (b[0] - a[0]) * rad
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * rad) * Math.cos(b[1] * rad) * Math.sin(dLon / 2) ** 2
-  return 6371 * 2 * Math.asin(Math.sqrt(h))
-}

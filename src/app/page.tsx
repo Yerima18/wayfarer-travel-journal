@@ -500,7 +500,7 @@ function App() {
                 <div className="map-legend"><span className="legend-visited" /> Been there <span className="legend-unvisited" /> Still dreaming</div>
               </div>
               <WorldMap visitedCountryIds={visitedCountryIds} onSelectCountry={openAdd} />
-              <div className="map-foot"><span>EVERY PIN HAS A STORY</span><span>{countryCount} {countryCount === 1 ? 'COUNTRY' : 'COUNTRIES'} MARKED</span></div>
+              <div className="map-foot"><span>EVERY PIN HAS A STORY</span><span>{`${countryCount} ${countryCount === 1 ? 'COUNTRY' : 'COUNTRIES'} MARKED`}</span></div>
             </article>
 
             <article className="panel recent-panel" id="places" aria-labelledby="places-heading">
