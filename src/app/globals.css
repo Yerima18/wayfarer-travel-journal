@@ -797,3 +797,7 @@ html[data-theme='dark'] .photo-grid li, html[data-theme='dark'] .entry-photo { b
 @media (max-width: 1180px) { .avatar-name { display: none; } .avatar-button { padding: 2px; } }
 @media (max-width: 760px) { .account-popover { position: fixed; top: 108px; right: 16px; left: 16px; width: auto; } }
 @media (prefers-reduced-motion: reduce) { .account-popover { animation: none; } }
+
+/* The form's input padding would otherwise cover the flag; Safari's contacts-autofill icon is not wanted here. */
+.entry-form .country-picker-has-flag { padding-left: 44px; }
+.country-picker-input::-webkit-contacts-auto-fill-button, .search-input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; position: absolute; right: 0; }
