@@ -12,6 +12,7 @@ import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
 import WorldProgress, { worldPercentOf } from '@/components/WorldProgress'
 import SearchBox, { type SearchPick } from '@/components/SearchBox'
+import AccountMenu from '@/components/AccountMenu'
 import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
@@ -496,7 +497,7 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><span>{t('crumb.root')}</span><i>/</i><b>{view === 'overview' ? t('crumb.overview') : view === 'places' ? t('crumb.places') : t('crumb.explore')}</b></div>
           <SearchBox onPick={handleSearchPick} />
-          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail ? <button className="account-button" type="button" onClick={signOut}>{t('action.signOut')}</button> : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
+          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail && userId ? <AccountMenu key={userId} userId={userId} email={userEmail} onSignOut={signOut} /> : userEmail ? null : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
         </header>
 
         <main className="dashboard">

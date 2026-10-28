@@ -12,6 +12,7 @@ Wayfarer is a small web app for keeping track of the places you have been. Add a
 - Schengen residence permits (Explore tab): say you hold a residence permit from a Schengen country and the other Schengen countries show as accessible for up to 90 days in any 180
 - Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
 - Photos (signed-in accounts): attach up to 5 pictures to a place, see them as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (and their hidden GPS data removed) before upload, and stored privately
+- Profile (signed-in accounts): an avatar button in the top bar opens your profile card, where you set a display name and pick an initial, a fun sticker or an uploaded photo (cropped to a small square and stored privately). It is saved in your account, so it follows you across devices
 - Counters for countries, cities and memories
 - Add, edit and delete places (city, country, date, short note)
 - Works instantly with no account: your journal is saved in your browser
@@ -44,6 +45,7 @@ src/
   app/auth/callback/      Handles the link in the confirmation email
   components/WorldMap.tsx The map
   components/AccountDialog.tsx  Sign in / create account
+  components/AccountMenu.tsx    Avatar button and profile card (name, sticker, photo)
   lib/supabase/           Supabase clients (browser + server) and env helpers
   proxy.ts                Keeps signed-in sessions fresh (Next.js proxy)
 supabase/schema.sql       Database table and security rules
