@@ -52,7 +52,7 @@ function asStrings(value: unknown): string[] {
 }
 
 /** Builds the avatar others see from the few fields that are shared. */
-function toSharedAvatar(displayName: string, avatar: unknown): Profile {
+export function toSharedAvatar(displayName: string, avatar: unknown): Profile {
   const fallback = defaultProfile(displayName, `${displayName}@`)
   const shared = (avatar ?? {}) as Partial<Record<'kind' | 'sticker' | 'color', unknown>>
   return {

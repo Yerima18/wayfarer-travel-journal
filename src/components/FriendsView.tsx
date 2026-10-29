@@ -3,9 +3,11 @@
 import { useState, type FormEvent } from 'react'
 
 import Avatar from '@/components/Avatar'
+import FriendPhotos from '@/components/FriendPhotos'
 import SharedProfileView from '@/components/SharedProfileView'
 import { useI18n } from '@/lib/i18n'
 import type { MessageKey } from '@/lib/messages'
+import { approvePhotoAccess, endPhotoAccess, requestPhotoAccess, type PhotoAccess } from '@/lib/photo-access'
 import {
   acceptFriendRequest,
   endFriendship,
@@ -20,6 +22,7 @@ import {
 
 type FriendsViewProps = {
   friendships: Friendship[]
+  photoAccess: PhotoAccess[]
   share: ShareSettings | null
   hasLoadError: boolean
   onRefresh: () => Promise<void>
@@ -34,7 +37,7 @@ const REQUEST_MESSAGES: Record<FriendRequestResult, MessageKey> = {
   not_found: 'friends.notFound',
 }
 
-export default function FriendsView({ friendships, share, hasLoadError, onRefresh, onOpenShare }: FriendsViewProps) {
+export default function FriendsView({ friendships, photoAccess, share, hasLoadError, onRefresh, onOpenShare }: FriendsViewProps) {
   const { t } = useI18n()
   const [handle, setHandle] = useState('')
   const [messageKey, setMessageKey] = useState<MessageKey | null>(null)
@@ -43,6 +46,8 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
 
   const requests = friendships.filter((item) => item.status === 'pending')
   const friends = friendships.filter((item) => item.status === 'accepted')
+  const photoRequests = photoAccess.filter((item) => item.status === 'pending' && item.isIncoming)
+  const photoViewers = photoAccess.filter((item) => item.status === 'approved' && item.isIncoming)
 
   async function run(action: () => Promise<void>) {
     setIsBusy(true)
@@ -74,6 +79,17 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
     }
   }
 
+  async function askForPhotos(friendHandle: string) {
+    await run(async () => {
+      const result = await requestPhotoAccess(friendHandle)
+      if (result === 'not_friends' || result === 'not_found') setMessageKey('friends.error')
+    })
+  }
+
+  function revokePhotos(viewer: PhotoAccess) {
+    if (window.confirm(t('friends.photoRevokeConfirm', { name: viewer.profile.name }))) void run(() => endPhotoAccess(viewer.id))
+  }
+
   function remove(friend: Friendship) {
     if (window.confirm(t('friends.removeConfirm', { name: friend.profile.name }))) void run(() => endFriendship(friend.id))
   }
@@ -83,6 +99,16 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
       <section className="friends-view">
         <button type="button" className="friends-back" onClick={() => setViewing(null)}>{t('friends.back')}</button>
         <SharedProfileView shared={viewing} />
+        {viewing.isFriend && (
+          <FriendPhotos
+            handle={viewing.handle}
+            name={viewing.profile.name}
+            access={photoAccess.find((item) => !item.isIncoming && item.handle === viewing.handle)}
+            isBusy={isBusy}
+            onAsk={() => void askForPhotos(viewing.handle)}
+            onCancel={(accessId) => void run(() => endPhotoAccess(accessId))}
+          />
+        )}
       </section>
     )
   }
@@ -112,7 +138,7 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
       )}
       {messageKey && <p className="friends-message" role="status">{t(messageKey)}</p>}
 
-      {requests.length > 0 && (
+      {(requests.length > 0 || photoRequests.length > 0) && (
         <div className="panel friends-panel">
           <h3>{t('friends.requests')}</h3>
           <ul className="friends-list">
@@ -122,6 +148,14 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
                 <span className="friends-name">{request.isIncoming ? t('friends.incoming', { name: request.profile.name }) : t('friends.outgoing', { name: request.profile.name })}</span>
                 {request.isIncoming && <button type="button" className="friends-primary" disabled={isBusy} onClick={() => void run(() => acceptFriendRequest(request.id))}>{t('friends.accept')}</button>}
                 <button type="button" className="friends-quiet" disabled={isBusy} onClick={() => void run(() => endFriendship(request.id))}>{request.isIncoming ? t('friends.decline') : t('friends.cancel')}</button>
+              </li>
+            ))}
+            {photoRequests.map((request) => (
+              <li key={request.id}>
+                <Avatar profile={request.profile} photoUrl={null} />
+                <span className="friends-name">{t('friends.photoIncoming', { name: request.profile.name })}</span>
+                <button type="button" className="friends-primary" disabled={isBusy} onClick={() => void run(() => approvePhotoAccess(request.id))}>{t('friends.photoAllow')}</button>
+                <button type="button" className="friends-quiet" disabled={isBusy} onClick={() => void run(() => endPhotoAccess(request.id))}>{t('friends.decline')}</button>
               </li>
             ))}
           </ul>
@@ -147,6 +181,20 @@ export default function FriendsView({ friendships, share, hasLoadError, onRefres
           </ul>
         )}
       </div>
+      {photoViewers.length > 0 && (
+        <div className="panel friends-panel">
+          <h3>{t('friends.photoViewers')}</h3>
+          <ul className="friends-list">
+            {photoViewers.map((viewer) => (
+              <li key={viewer.id}>
+                <Avatar profile={viewer.profile} photoUrl={null} />
+                <span className="friends-name">{viewer.profile.name}</span>
+                <button type="button" className="friends-quiet" disabled={isBusy} onClick={() => revokePhotos(viewer)}>{t('friends.photoRevoke')}</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }

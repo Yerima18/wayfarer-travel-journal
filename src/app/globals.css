@@ -888,3 +888,9 @@ html[data-theme='dark'] .friends-add input { background: var(--raise); border-co
   .shared-head { flex-wrap: wrap; }
   .shared-stats { justify-items: start; text-align: left; }
 }
+
+/* Friend photos */
+.friend-photos-locked { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.friend-photos-locked p { margin: 0; color: var(--muted); font-size: 14px; }
+.friend-photo-places { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.friend-photo-place { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; font-weight: 700; }

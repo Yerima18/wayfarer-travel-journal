@@ -125,7 +125,7 @@ function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [gallery, setGallery] = useState<{ entryId: string; index: number } | null>(null)
   const { wishlistIds, toggleWishlist } = useWishlist(userId)
-  const { friendships, share, hasError: friendsHaveError, incomingCount, refresh: refreshFriends } = useFriends(userId)
+  const { friendships, photoAccess, share, hasError: friendsHaveError, incomingCount, refresh: refreshFriends } = useFriends(userId)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const { photosByEntry, noticeKey, dismissNotice, savePhotos, discardPhotos } = usePhotos(userId)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
@@ -531,7 +531,7 @@ function App() {
           {noticeKey && <div className="import-notice" role="status"><span>{t(noticeKey)}</span><button type="button" onClick={dismissNotice}>{t('notice.dismiss')}</button></div>}
           {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
           {view === 'friends' && userId ? (
-            <FriendsView friendships={friendships} share={share} hasLoadError={friendsHaveError} onRefresh={refreshFriends} onOpenShare={() => setIsShareOpen(true)} />
+            <FriendsView friendships={friendships} photoAccess={photoAccess} share={share} hasLoadError={friendsHaveError} onRefresh={refreshFriends} onOpenShare={() => setIsShareOpen(true)} />
           ) : view === 'explore' ? (
             <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} wishlistIds={pendingWishIds} onToggleWishlist={toggleWishlist} focus={exploreFocus} />
           ) : view === 'places' ? (
