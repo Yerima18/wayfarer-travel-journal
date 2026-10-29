@@ -321,7 +321,7 @@ body { background: var(--paper); color: var(--ink); }
 .map-tip { position: absolute; z-index: 1; top: 10px; left: 10px; padding: 6px 12px; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.85); font-size: 13px; font-weight: 600; pointer-events: none; }
 .map-tip-on { color: var(--ink); background: #fff; box-shadow: 0 4px 12px rgba(42,33,80,.15); }
 .world-map .map-geography { transition: fill 180ms ease, transform 180ms ease; cursor: pointer; }
-.world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled):hover { fill: #ffe29a; }
+.world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled):not(.map-geography-wish):hover { fill: #ffe29a; }
 .world-map .map-geography-visited:hover { filter: brightness(1.12); }
 .world-map .map-geography:focus-visible { stroke: var(--ink); stroke-width: 1.5; }
 .map-foot { border-top-color: #f1e6d3; }
@@ -496,8 +496,8 @@ html[data-theme='dark'] .legend-unvisited { background: #3d3768; box-shadow: ins
 html[data-theme='dark'] .map-frame { background: #1b2650; }
 html[data-theme='dark'] .map-sphere { fill: #1b2650; stroke: #2f3d7a; }
 html[data-theme='dark'] .map-graticule { stroke: #2a3568; }
-html[data-theme='dark'] .world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled) { fill: #3a3566; stroke: #4d4682; }
-html[data-theme='dark'] .world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled):hover { fill: #5a5190; }
+html[data-theme='dark'] .world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled):not(.map-geography-wish) { fill: #3a3566; stroke: #4d4682; }
+html[data-theme='dark'] .world-map .map-geography:not(.map-geography-visited):not(.map-geography-filled):not(.map-geography-wish):hover { fill: #5a5190; }
 html[data-theme='dark'] .map-tip { background: rgba(30,26,59,.92); }
 html[data-theme='dark'] .map-tip-on { background: #2c2760; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
 html[data-theme='dark'] .map-foot { border-top-color: var(--line); }
@@ -801,3 +801,23 @@ html[data-theme='dark'] .photo-grid li, html[data-theme='dark'] .entry-photo { b
 /* The form's input padding would otherwise cover the flag; Safari's contacts-autofill icon is not wanted here. */
 .entry-form .country-picker-has-flag { padding-left: 44px; }
 .country-picker-input::-webkit-contacts-auto-fill-button, .search-input::-webkit-contacts-auto-fill-button { visibility: hidden; display: none !important; pointer-events: none; position: absolute; right: 0; }
+
+/* Wishlist */
+.legend-wish { width: 7px; height: 7px; display: inline-block; margin-left: 2px; border-radius: 50%; background: #a8dcff; box-shadow: 0 0 0 1px #6cb8ee; }
+.world-map .map-geography-wish:hover { filter: brightness(.94); }
+html[data-theme='dark'] .world-map .map-geography-wish { fill: #2f6fa8; stroke: #5aa6e0; }
+.wishlist-panel { margin-top: 18px; padding: 22px 22px 24px; }
+.wishlist-add .country-picker-input { min-height: 46px; padding: 0 14px; border: 2px solid #ece6f7; border-radius: 14px; outline: none; color: var(--ink); background: #fff; font-size: 15px; font-weight: 500; }
+.wishlist-add .country-picker-input:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
+@media (max-width: 760px) { .wishlist-add .country-picker-input { font-size: 16px; } }
+html[data-theme='dark'] .wishlist-add .country-picker-input { background: var(--raise); border-color: #3d3770; }
+.wishlist-add { margin: 4px 0 14px; max-width: 420px; }
+.wishlist-empty { margin: 0; color: var(--muted); font-size: 14px; }
+.wishlist-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.wishlist-list li { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, #a8dcff 22%, var(--panel)); }
+.wishlist-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.wishlist-went { padding: 6px 10px; border: 0; border-radius: 999px; background: var(--violet); color: #fff; font: inherit; font-size: 12px; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.wishlist-remove { width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.wishlist-remove:hover { background: rgba(124, 92, 255, .12); color: var(--ink); }
+.wish-toggle { width: 100%; margin-top: 8px; padding: 11px 14px; border: 2px solid #6cb8ee; border-radius: 14px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.wish-toggle[aria-pressed='true'] { background: color-mix(in srgb, #a8dcff 35%, transparent); }

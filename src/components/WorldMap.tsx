@@ -15,6 +15,8 @@ type WorldMapProps = {
   /** Text shown after the country name in the hover bubble. Defaults to the "add a place" hint. */
   describe?: (countryId: string) => string
   selectedId?: string | null
+  /** Countries the person wants to visit, painted in a second colour. */
+  wishlistIds?: string[]
   /** Where the user is, drawn as a pin. */
   pin?: { lat: number; lon: number } | null
 }
@@ -22,21 +24,25 @@ type WorldMapProps = {
 const selectableIds = new Set(countries.map((country) => country.id))
 const VISITED_COLORS = ['#ff6b57', '#ffb627', '#19b8a6', '#7c5cff', '#ff7ab6', '#2f9bff']
 
+const WISH_FILL = '#a8dcff'
+const WISH_STROKE = '#6cb8ee'
+
 function colorFor(id: string) {
   const sum = Array.from(id).reduce((total, char) => total + char.charCodeAt(0), 0)
   return VISITED_COLORS[sum % VISITED_COLORS.length]
 }
 
-export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, describe, selectedId, pin }: WorldMapProps) {
+export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, describe, selectedId, pin, wishlistIds = [] }: WorldMapProps) {
   const { locale, t } = useI18n()
   const visited = new Set(visitedCountryIds)
-  const [hovered, setHovered] = useState<{ id: string; name: string; visited: boolean; canAdd: boolean } | null>(null)
+  const wished = new Set(wishlistIds)
+  const [hovered, setHovered] = useState<{ id: string; name: string; visited: boolean; wished: boolean; canAdd: boolean } | null>(null)
 
   return (
     <div className="map-frame">
       <div className={hovered ? 'map-tip map-tip-on' : 'map-tip'} aria-hidden="true">
         {hovered?.canAdd ? <Flag countryId={hovered.id} className="flag flag-small" /> : null}
-        <span>{hovered ? `${hovered.visited ? '📍 ' : ''}${hovered.name}${hovered.canAdd ? ` · ${describe ? describe(hovered.id) : t('map.clickToAdd')}` : ''}` : t('map.point')}</span>
+        <span>{hovered ? `${hovered.visited ? '📍 ' : hovered.wished ? '⭐ ' : ''}${hovered.name}${hovered.canAdd ? ` · ${describe ? describe(hovered.id) : t('map.clickToAdd')}` : ''}` : t('map.point')}</span>
       </div>
       <ComposableMap
         aria-label={t('map.aria')}
@@ -54,14 +60,15 @@ export default function WorldMap({ visitedCountryIds, onSelectCountry, fills, de
             const isVisited = visited.has(id)
             const canAdd = selectableIds.has(id)
             const painted = fills?.[id]
-            const hover = { id, name: canAdd ? countryLabel(id, locale) : String(geography.properties?.name ?? ''), visited: isVisited, canAdd }
+            const isWished = !isVisited && !fills && wished.has(id)
+            const hover = { id, name: canAdd ? countryLabel(id, locale) : String(geography.properties?.name ?? ''), visited: isVisited, wished: isWished, canAdd }
             return (
               <Geography
                 key={geography.rsmKey}
                 geography={geography}
-                className={['map-geography', isVisited && !fills ? 'map-geography-visited' : '', painted ? 'map-geography-filled' : '', selectedId === id ? 'map-geography-selected' : ''].filter(Boolean).join(' ')}
-                fill={painted ?? (isVisited && !fills ? colorFor(id) : '#fdf3dc')}
-                stroke={(isVisited && !fills) || painted ? '#ffffff' : '#ecdcb8'}
+                className={['map-geography', isVisited && !fills ? 'map-geography-visited' : '', painted ? 'map-geography-filled' : '', isWished ? 'map-geography-wish' : '', selectedId === id ? 'map-geography-selected' : ''].filter(Boolean).join(' ')}
+                fill={painted ?? (isVisited && !fills ? colorFor(id) : isWished ? WISH_FILL : '#fdf3dc')}
+                stroke={(isVisited && !fills) || painted ? '#ffffff' : isWished ? WISH_STROKE : '#ecdcb8'}
                 strokeWidth={0.65}
                 onClick={canAdd ? () => onSelectCountry?.(id) : undefined}
                 onMouseEnter={() => setHovered(hover)}

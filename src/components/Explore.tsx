@@ -29,6 +29,8 @@ export type ExploreFocus = { countryId: string; nonce: number }
 type ExploreProps = {
   visitedCountryIds: string[]
   onAddPlace: (countryId: string) => void
+  wishlistIds: string[]
+  onToggleWishlist: (countryId: string) => void
   /** A country picked from the search bar; the nonce lets the same country be picked twice. */
   focus?: ExploreFocus | null
 }
@@ -59,7 +61,7 @@ function save(key: string, value: string) {
   }
 }
 
-export default function Explore({ visitedCountryIds, onAddPlace, focus }: ExploreProps) {
+export default function Explore({ visitedCountryIds, onAddPlace, wishlistIds, onToggleWishlist, focus }: ExploreProps) {
   const { locale, t } = useI18n()
   const [passportId, setPassportId] = useState(() => readSaved(PASSPORT_KEY, (id) => passportCountries.some((country) => country.id === id)))
   const [permitId, setPermitId] = useState(() => readSaved(PERMIT_KEY, (id) => isSchengen(flagCode(id))))
@@ -357,6 +359,7 @@ export default function Explore({ visitedCountryIds, onAddPlace, focus }: Explor
                   {kmTo(selected.id) !== null && <p className="visa-distance">{kmTo(selected.id) === 0 ? t('near.hereNow') : t('near.about', { km: formatKm(kmTo(selected.id) ?? 0) })}</p>}
                   {visited.has(selected.id) && <p className="visa-visited">{t('explore.visited')}</p>}
                   {selected.info.status !== 'self' && <button type="button" className="empty-add" onClick={() => onAddPlace(selected.id)}>{t('explore.addToJournal')} <span>↗</span></button>}
+                  {selected.info.status !== 'self' && !visited.has(selected.id) && <button type="button" className="wish-toggle" aria-pressed={wishlistIds.includes(selected.id)} onClick={() => onToggleWishlist(selected.id)}>{wishlistIds.includes(selected.id) ? t('explore.wishRemove') : t('explore.wishAdd')} <span>⭐</span></button>}
                 </div>
               )}
 

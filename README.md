@@ -11,6 +11,7 @@ Wayfarer is a colourful web app for keeping track of the places you have been, a
 - Add, edit and delete places (city with suggestions per country, date, short note)
 - "My places" list, plus counters for countries, cities and memories
 - World progress ring: the share of the world's countries you have visited
+- Dream list (wishlist): mark countries you want to visit; they show in a second colour on the map, can be added from Explore, and become a normal place with one click on "I went!"
 - Search bar for countries and cities (accent-insensitive, English or French); type-to-search country fields everywhere
 - Photos (signed-in accounts): up to 5 pictures per place, shown as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (their hidden GPS data is removed) and stored privately
 - Profile (signed-in accounts): an avatar button in the top bar opens your profile card, where you set a display name and pick an initial, a fun sticker or an uploaded photo
@@ -41,8 +42,8 @@ Wayfarer is a colourful web app for keeping track of the places you have been, a
 
 | Situation | Where your data is stored |
 | --- | --- |
-| Not signed in | Places in your browser (`localStorage`). Nothing leaves your device. Photos and profile need an account. |
-| Signed in | Places in the `travel_entries` table, photos in `entry_photos` plus a private storage bucket, display name and avatar in your account profile. |
+| Not signed in | Places and dream list in your browser (`localStorage`). Nothing leaves your device. Photos and profile need an account. |
+| Signed in | Places in the `travel_entries` table, photos in `entry_photos` plus a private storage bucket, display name, avatar and dream list in your account profile. |
 
 If you used the app before signing in, Wayfarer offers to **import** your browser journal into your new account the first time you sign in.
 

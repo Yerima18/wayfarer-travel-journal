@@ -10,6 +10,7 @@ import PhotoGallery from '@/components/PhotoGallery'
 import CountryPicker from '@/components/CountryPicker'
 import Explore, { type ExploreFocus } from '@/components/Explore'
 import Flag from '@/components/Flag'
+import WishlistPanel from '@/components/WishlistPanel'
 import WorldProgress, { worldPercentOf } from '@/components/WorldProgress'
 import SearchBox, { type SearchPick } from '@/components/SearchBox'
 import AccountMenu from '@/components/AccountMenu'
@@ -24,6 +25,7 @@ import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import type { PhotoDraft } from '@/lib/photos'
 import { usePhotos } from '@/lib/use-photos'
+import { useWishlist } from '@/lib/use-wishlist'
 
 type JournalEntry = {
   id: string
@@ -108,6 +110,7 @@ function App() {
   const [photoDraft, setPhotoDraft] = useState<PhotoDraft>(EMPTY_DRAFT)
   const [isSaving, setIsSaving] = useState(false)
   const [gallery, setGallery] = useState<{ entryId: string; index: number } | null>(null)
+  const { wishlistIds, toggleWishlist } = useWishlist(userId)
   const { photosByEntry, noticeKey, dismissNotice, savePhotos, discardPhotos } = usePhotos(userId)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
   const [localEntriesSnapshot, setLocalEntriesSnapshot] = useState<JournalEntry[]>([])
@@ -272,6 +275,11 @@ function App() {
   const countryCount = useMemo(() => new Set(entries.map((entry) => entry.countryId)).size, [entries])
   const cityCount = useMemo(() => new Set(entries.map((entry) => `${entry.countryId}:${entry.city.trim().toLowerCase()}`)).size, [entries])
   const visitedCountryIds = useMemo(() => Array.from(new Set(entries.map((entry) => entry.countryId))), [entries])
+  const pendingWishIds = useMemo(() => wishlistIds.filter((id) => !visitedCountryIds.includes(id)), [wishlistIds, visitedCountryIds])
+  const wishCandidateIds = useMemo(
+    () => countries.map((country) => country.id).filter((id) => !visitedCountryIds.includes(id) && !wishlistIds.includes(id)),
+    [visitedCountryIds, wishlistIds],
+  )
 
   const editingEntry = formOpen && editingId ? entries.find((item) => item.id === editingId) : undefined
 
@@ -504,7 +512,7 @@ function App() {
           {noticeKey && <div className="import-notice" role="status"><span>{t(noticeKey)}</span><button type="button" onClick={dismissNotice}>{t('notice.dismiss')}</button></div>}
           {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
           {view === 'explore' ? (
-            <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} focus={exploreFocus} />
+            <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} wishlistIds={pendingWishIds} onToggleWishlist={toggleWishlist} focus={exploreFocus} />
           ) : view === 'places' ? (
           <section className="places-view reveal" aria-labelledby="places-page-heading">
             <div className="places-head">
@@ -566,9 +574,9 @@ function App() {
             <article className="panel map-panel reveal" style={revealStyle(4)} aria-labelledby="map-heading">
               <div className="panel-heading">
                 <div><div className="panel-kicker">{t('map.kicker')}</div><h2 id="map-heading">{t('map.title')}</h2></div>
-                <div className="map-legend"><span className="legend-visited" /> {t('map.been')} <span className="legend-unvisited" /> {t('map.dreaming')}</div>
+                <div className="map-legend"><span className="legend-visited" /> {t('map.been')} <span className="legend-unvisited" /> {t('map.dreaming')} <span className="legend-wish" /> {t('map.wish')}</div>
               </div>
-              <WorldMap visitedCountryIds={visitedCountryIds} onSelectCountry={openAdd} />
+              <WorldMap visitedCountryIds={visitedCountryIds} wishlistIds={pendingWishIds} onSelectCountry={openAdd} />
               <div className="map-foot"><span>{t('map.foot')}</span><span>{t('map.marked', { n: countryCount })}</span></div>
             </article>
 
@@ -600,6 +608,8 @@ function App() {
               )}
             </article>
           </section>
+
+          <WishlistPanel wishlistIds={pendingWishIds} candidateIds={wishCandidateIds} onAdd={toggleWishlist} onRemove={toggleWishlist} onVisited={openAdd} />
 
           </>
           )}
