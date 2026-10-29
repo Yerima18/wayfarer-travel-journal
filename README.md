@@ -1,55 +1,68 @@
 # Wayfarer — a personal travel journal
 
-Wayfarer is a small web app for keeping track of the places you have been. Add a country and a city (plus an optional date and a short note), and the country lights up on a world map. Your recent places are listed next to it, and you can edit or delete any of them.
+Wayfarer is a colourful web app for keeping track of the places you have been, and for dreaming about the next ones. Add a country and a city (plus an optional date, a short note and photos) and the country lights up on a world map, with a progress ring showing how much of the world you have covered. An Explore tab uses your passport to show where you can travel easily. It works in English and French, in light and dark mode, on desktop and phone.
 
 **Live demo:** https://wayfarer-travel-journal.vercel.app
 
 ## Features
 
-- Interactive world map that highlights every country you have visited
-- Passport checker (Explore tab): pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa; add "Near me" (use your device location, which never leaves your browser, or pick the country you are in) to see the closest easy destinations with distances, and add any country to your journal
-- English and French: the interface follows your browser language, with an EN/FR toggle in the top bar that remembers your choice
-- Schengen residence permits (Explore tab): say you hold a residence permit from a Schengen country and the other Schengen countries show as accessible for up to 90 days in any 180
-- Light and dark mode: follows your device setting, with a toggle in the top bar that remembers your choice
-- Photos (signed-in accounts): attach up to 5 pictures to a place, see them as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (and their hidden GPS data removed) before upload, and stored privately
-- Profile (signed-in accounts): an avatar button in the top bar opens your profile card, where you set a display name and pick an initial, a fun sticker or an uploaded photo (cropped to a small square and stored privately). It is saved in your account, so it follows you across devices
-- Counters for countries, cities and memories
-- Add, edit and delete places (city, country, date, short note)
+**Your journal**
+- Interactive world map that highlights every country you have visited; click any country to add a place to it
+- Add, edit and delete places (city with suggestions per country, date, short note)
+- "My places" list, plus counters for countries, cities and memories
+- World progress ring: the share of the world's countries you have visited
+- Search bar for countries and cities (accent-insensitive, English or French); type-to-search country fields everywhere
+- Photos (signed-in accounts): up to 5 pictures per place, shown as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (their hidden GPS data is removed) and stored privately
+- Profile (signed-in accounts): an avatar button in the top bar opens your profile card, where you set a display name and pick an initial, a fun sticker or an uploaded photo
+
+**Explore**
+- Passport checker: pick your passport and the map shows where you can go visa-free, with a visa on arrival, with an e-visa, or only with a visa
+- Schengen residence permits: say you hold a residence permit from a Schengen country and the other Schengen countries show as accessible for up to 90 days in any 180
+- Near me: use your device location (it never leaves your browser) or pick the country you are in to see the closest easy destinations with distances, and add any country to your journal
+
+**Everywhere**
+- English and French: follows your browser language, with an EN/FR toggle that remembers your choice
+- Light and dark mode: follows your device setting, with a toggle that remembers your choice
+- Phone friendly: hamburger menu, touch-sized controls, smooth animations (they respect "reduce motion")
 - Works instantly with no account: your journal is saved in your browser
 - Optional account (email + password): your journal is saved in the cloud and follows you across devices
-- Private by design: each account can only ever read and change its own entries
+- Private by design: each account can only ever read and change its own data
 
 ## Tech stack
 
 - [Next.js](https://nextjs.org) (App Router) with React and TypeScript
-- [Supabase](https://supabase.com) for accounts and the database (Postgres with row-level security)
+- [Supabase](https://supabase.com) for accounts, the database (Postgres with row-level security) and private file storage
 - [react-simple-maps](https://www.react-simple-maps.io) and `world-atlas` for the map
+- [flag-icons](https://github.com/lipis/flag-icons) for flags
+- [passport-index-dataset](https://github.com/ilyankou/passport-index-dataset) for visa rules (see "Visa data")
 - Hosted on [Vercel](https://vercel.com)
 
 ## How it works
 
-| Situation | Where your places are stored |
+| Situation | Where your data is stored |
 | --- | --- |
-| Not signed in | In your browser (`localStorage`). Nothing leaves your device. |
-| Signed in | In the `travel_entries` table in Supabase, tied to your account. |
+| Not signed in | Places in your browser (`localStorage`). Nothing leaves your device. Photos and profile need an account. |
+| Signed in | Places in the `travel_entries` table, photos in `entry_photos` plus a private storage bucket, display name and avatar in your account profile. |
 
 If you used the app before signing in, Wayfarer offers to **import** your browser journal into your new account the first time you sign in.
 
-Security note: the `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is meant to be public (it ships to the browser). What keeps data private is the row-level security in `supabase/schema.sql`, which only lets a user touch rows where `user_id` is their own. Never put a `service_role` or `sb_secret_...` key in this project.
+Security note: the `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is meant to be public (it ships to the browser). What keeps data private is the row-level security in `supabase/schema.sql` and `supabase/photos.sql`, which only let a user touch rows and files that belong to them. Never put a `service_role` or `sb_secret_...` key in this project.
 
 ## Project structure
 
 ```
 src/
-  app/page.tsx            Main screen: stats, map, places list, add/edit form
-  app/auth/callback/      Handles the link in the confirmation email
-  components/WorldMap.tsx The map
-  components/AccountDialog.tsx  Sign in / create account
-  components/AccountMenu.tsx    Avatar button and profile card (name, sticker, photo)
-  lib/supabase/           Supabase clients (browser + server) and env helpers
-  proxy.ts                Keeps signed-in sessions fresh (Next.js proxy)
-supabase/schema.sql       Database table and security rules
-supabase/photos.sql       Photos table, private storage bucket and their rules
+  app/page.tsx              Main screen: overview, my places, add/edit form
+  app/auth/callback/        Handles the link in the confirmation email
+  components/               WorldMap, Explore, SearchBox, CountryPicker, WorldProgress,
+                            AccountDialog, AccountMenu, ProfileEditor, photo components, toggles
+  lib/                      Countries, cities, visa and Schengen rules, search, translations
+                            (messages.ts), photo and avatar helpers
+  lib/supabase/             Supabase clients (browser + server) and env helpers
+  proxy.ts                  Keeps signed-in sessions fresh (Next.js proxy)
+public/visa/                Visa data, one small file per passport
+supabase/schema.sql         Places table and security rules
+supabase/photos.sql         Photos table, private storage bucket and their rules
 ```
 
 ---
