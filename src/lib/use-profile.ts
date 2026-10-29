@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { syncSharedIdentity } from '@/lib/social'
 import { createClient } from '@/lib/supabase/client'
 import { defaultProfile, readProfile, removeAvatarFile, signedAvatarUrl, uploadAvatar, type Profile } from '@/lib/avatar'
 
@@ -42,6 +43,8 @@ export function useProfile(userId: string, email: string) {
     const url = await signedAvatarUrl(photoPath).catch(() => null)
     setProfile(saved)
     setPhotoUrl(url)
+    // The shared page copies the name and avatar; failing to update it must not fail the save.
+    await syncSharedIdentity(userId, saved).catch(() => undefined)
   }
 
   return { profile, photoUrl, saveProfile }

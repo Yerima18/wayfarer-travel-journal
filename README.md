@@ -14,6 +14,7 @@ Wayfarer is a colourful web app for keeping track of the places you have been, a
 - Dream list (wishlist): mark countries you want to visit; they show in a second colour on the map, can be added from Explore, and become a normal place with one click on "I went!"
 - Search bar for countries and cities (accent-insensitive, English or French); type-to-search country fields everywhere
 - Photos (signed-in accounts): up to 5 pictures per place, shown as thumbnails and in a full-screen gallery. Pictures are shrunk in your browser (their hidden GPS data is removed) and stored privately
+- Share and friends (signed-in accounts): pick a username, then choose what others see (your map and countries always; your cities and dream list if you allow it). Friends you accept always see it, and anyone with your link `/u/your-username` can too if you turn that on. Photos, notes and dates are never shared. Add friends by username and open their map from the Friends tab
 - Profile (signed-in accounts): an avatar button in the top bar opens your profile card, where you set a display name and pick an initial, a fun sticker or an uploaded photo
 
 **Explore**
@@ -48,6 +49,8 @@ Wayfarer is a colourful web app for keeping track of the places you have been, a
 
 If you used the app before signing in, Wayfarer offers to **import** your browser journal into your new account the first time you sign in.
 
+Sharing note: other people never read your tables directly. They only get what the `get_shared_profile` function in `supabase/social.sql` returns (the countries you visited, plus cities and dream list if you allow them), and only if you are their friend or you turned the link on.
+
 Security note: the `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is meant to be public (it ships to the browser). What keeps data private is the row-level security in `supabase/schema.sql` and `supabase/photos.sql`, which only let a user touch rows and files that belong to them. Never put a `service_role` or `sb_secret_...` key in this project.
 
 ## Project structure
@@ -56,6 +59,7 @@ Security note: the `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is meant to be public 
 src/
   app/page.tsx              Main screen: overview, my places, add/edit form
   app/auth/callback/        Handles the link in the confirmation email
+  app/u/[handle]/           Public page of a shared journal
   components/               WorldMap, Explore, SearchBox, CountryPicker, WorldProgress,
                             AccountDialog, AccountMenu, ProfileEditor, photo components, toggles
   lib/                      Countries, cities, visa and Schengen rules, search, translations
@@ -66,6 +70,7 @@ public/icons/               App icon (home screen)
 public/visa/                Visa data, one small file per passport
 supabase/schema.sql         Places table and security rules
 supabase/photos.sql         Photos table, private storage bucket and their rules
+supabase/social.sql         Usernames, friendships and the functions that control what others see
 ```
 
 ---
@@ -107,11 +112,12 @@ Open http://127.0.0.1:3000. Without any extra setup the app runs in **local mode
    `.env.local` is gitignored, so your keys are never pushed to GitHub.
 4. **Create the table:** open *SQL Editor* in Supabase, paste the whole content of `supabase/schema.sql`, and run it. This creates the `travel_entries` table and the security rules. You only do this once.
 5. **Enable photos (optional):** in *SQL Editor*, paste and run `supabase/photos.sql` once. It creates the `entry_photos` table and a private `entry-photos` storage bucket, both readable only by their owner.
-6. **Allow email + password sign-in:** *Authentication → Providers → Email* must be enabled (it is by default).
-7. **Tell Supabase your site address:** *Authentication → URL Configuration*
+6. **Enable sharing and friends (optional):** in *SQL Editor*, paste and run `supabase/social.sql` once. It creates the `profiles` and `friendships` tables and three functions that decide what a visitor may see.
+7. **Allow email + password sign-in:** *Authentication → Providers → Email* must be enabled (it is by default).
+8. **Tell Supabase your site address:** *Authentication → URL Configuration*
    - **Site URL:** `http://localhost:3000` for local work (use your Vercel URL in production).
    - **Redirect URLs:** add `http://localhost:3000/auth/callback`.
-8. Restart `pnpm dev`, click **Sign in → Create an account**, confirm your email, and add a place.
+9. Restart `pnpm dev`, click **Sign in → Create an account**, confirm your email, and add a place.
 
 ## Deploy your own copy on Vercel
 
@@ -134,9 +140,10 @@ Any later `git push` to `main` redeploys automatically. If you change an environ
 | Problem | Likely cause and fix |
 | --- | --- |
 | "Account sync is ready to connect" in the sign-in window | The two environment variables are missing or misspelled. Fix them (locally or in Vercel) and redeploy/restart. |
-| Confirmation email link goes to the wrong page or errors | Site URL / Redirect URLs in Supabase do not match your site address (step 7 / step 5 above). |
+| Confirmation email link goes to the wrong page or errors | Site URL / Redirect URLs in Supabase do not match your site address (step 8 / step 5 of the Vercel section). |
 | "Sync issue" badge after signing in | The `travel_entries` table does not exist yet. Run `supabase/schema.sql`. |
 | "Your photos could not be loaded" | The photos table or bucket does not exist yet. Run `supabase/photos.sql`. |
+| "Your friends could not be loaded" or the share dialog fails | The sharing tables do not exist yet. Run `supabase/social.sql`. |
 | Places disappear when switching browsers | You are not signed in. Browser-only places stay in that browser; sign in to sync. |
 | Confirmation emails do not arrive | Supabase's built-in email sender is rate-limited on the free plan. Wait a bit, check spam, or turn off "Confirm email" in *Authentication → Providers → Email* while testing. |
 

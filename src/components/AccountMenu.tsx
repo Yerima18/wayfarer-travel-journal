@@ -12,10 +12,11 @@ type AccountMenuProps = {
   userId: string
   email: string
   onSignOut: () => void
+  onOpenShare: () => void
 }
 
 /** Avatar button in the top bar that opens the profile card (name, avatar editor, sign out). */
-export default function AccountMenu({ userId, email, onSignOut }: AccountMenuProps) {
+export default function AccountMenu({ userId, email, onSignOut, onOpenShare }: AccountMenuProps) {
   const { t } = useI18n()
   const { profile, photoUrl, saveProfile } = useProfile(userId, email)
   const [isOpen, setIsOpen] = useState(false)
@@ -68,6 +69,7 @@ export default function AccountMenu({ userId, email, onSignOut }: AccountMenuPro
                 </div>
               </div>
               <button className="account-item" type="button" onClick={() => setIsEditing(true)}>{t('account.edit')}</button>
+              <button className="account-item" type="button" onClick={() => { setIsOpen(false); onOpenShare() }}>{t('account.share')}</button>
               <button className="account-item" type="button" onClick={onSignOut}>{t('action.signOut')}</button>
             </>
           )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WorldMap from '@/components/WorldMap'
 import AccountDialog from '@/components/AccountDialog'
 import CountUp from '@/components/CountUp'
@@ -14,6 +14,8 @@ import WishlistPanel from '@/components/WishlistPanel'
 import WorldProgress, { worldPercentOf } from '@/components/WorldProgress'
 import SearchBox, { type SearchPick } from '@/components/SearchBox'
 import AccountMenu from '@/components/AccountMenu'
+import FriendsView from '@/components/FriendsView'
+import ShareDialog from '@/components/ShareDialog'
 import LanguageToggle from '@/components/LanguageToggle'
 import ThemeToggle from '@/components/ThemeToggle'
 import { countries } from '@/lib/countries'
@@ -25,6 +27,7 @@ import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/env'
 import type { PhotoDraft } from '@/lib/photos'
 import { usePhotos } from '@/lib/use-photos'
+import { useFriends } from '@/lib/use-friends'
 import { useWishlist } from '@/lib/use-wishlist'
 
 type JournalEntry = {
@@ -72,6 +75,17 @@ function PinIcon({ small = false }: { small?: boolean }) {
   )
 }
 
+function FriendsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 19c.6-3.2 2.7-5 5.5-5s4.9 1.8 5.5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="17" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M16.5 14.2c2.2.1 3.7 1.5 4.2 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function CompassIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" width="16" height="16">
@@ -98,7 +112,7 @@ function App() {
   const [storageWarning, setStorageWarning] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [view, setView] = useState<'overview' | 'places' | 'explore'>('overview')
+  const [view, setView] = useState<'overview' | 'places' | 'explore' | 'friends'>('overview')
   const [formCountry, setFormCountry] = useState('')
   const [formCity, setFormCity] = useState('')
   const [showAll, setShowAll] = useState(false)
@@ -111,6 +125,8 @@ function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [gallery, setGallery] = useState<{ entryId: string; index: number } | null>(null)
   const { wishlistIds, toggleWishlist } = useWishlist(userId)
+  const { friendships, share, hasError: friendsHaveError, incomingCount, refresh: refreshFriends } = useFriends(userId)
+  const [isShareOpen, setIsShareOpen] = useState(false)
   const { photosByEntry, noticeKey, dismissNotice, savePhotos, discardPhotos } = usePhotos(userId)
   const [cloudStatus, setCloudStatus] = useState<'local' | 'syncing' | 'synced' | 'error'>('local')
   const [localEntriesSnapshot, setLocalEntriesSnapshot] = useState<JournalEntry[]>([])
@@ -450,6 +466,8 @@ function App() {
     setCloudStatus('synced')
   }
 
+  const closeShare = useCallback(() => setIsShareOpen(false), [])
+
   async function signOut() {
     const { error } = await createClient().auth.signOut()
     if (error) setCloudStatus('error')
@@ -490,6 +508,7 @@ function App() {
           <button className={view === 'overview' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'overview' ? 'page' : undefined} onClick={() => setView('overview')}><span className="nav-glyph nav-glyph-home" />{t('nav.overview')}</button>
           <button className={view === 'places' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'places' ? 'page' : undefined} onClick={() => setView('places')}><span className="nav-glyph nav-glyph-pin"><PinIcon small /></span>{t('nav.places')}<span className="nav-count">{entries.length}</span></button>
           <button className={view === 'explore' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'explore' ? 'page' : undefined} onClick={() => setView('explore')}><span className="nav-glyph"><CompassIcon /></span>{t('nav.explore')}</button>
+          {userId && <button className={view === 'friends' ? 'nav-link nav-link-active' : 'nav-link'} type="button" aria-current={view === 'friends' ? 'page' : undefined} onClick={() => setView('friends')}><span className="nav-glyph"><FriendsIcon /></span>{t('nav.friends')}{incomingCount > 0 && <span className="nav-count">{incomingCount}</span>}</button>}
         </nav>
 
         <div className="sidebar-bottom">
@@ -503,15 +522,17 @@ function App() {
 
       <div className="main-column" id="overview">
         <header className="topbar">
-          <div className="breadcrumb"><span>{t('crumb.root')}</span><i>/</i><b>{view === 'overview' ? t('crumb.overview') : view === 'places' ? t('crumb.places') : t('crumb.explore')}</b></div>
+          <div className="breadcrumb"><span>{t('crumb.root')}</span><i>/</i><b>{view === 'overview' ? t('crumb.overview') : view === 'places' ? t('crumb.places') : view === 'friends' ? t('crumb.friends') : t('crumb.explore')}</b></div>
           <SearchBox onPick={handleSearchPick} />
-          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail && userId ? <AccountMenu key={userId} userId={userId} email={userEmail} onSignOut={signOut} /> : userEmail ? null : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
+          <div className="topbar-right"><span className={storageWarning || cloudStatus === 'error' ? 'saved-pill saved-pill-warning' : 'saved-pill'} role="status"><span />{` ${userEmail ? cloudStatus === 'syncing' ? t('status.syncing') : cloudStatus === 'error' ? t('status.error') : t('status.synced') : storageWarning ? t('status.warning') : t('status.local')}`}</span><LanguageToggle /><ThemeToggle />{userEmail && userId ? <AccountMenu key={userId} userId={userId} email={userEmail} onSignOut={signOut} onOpenShare={() => setIsShareOpen(true)} /> : userEmail ? null : <button className="account-button" type="button" onClick={() => setAccountOpen(true)}>{t('action.signIn')}</button>}<button className="top-add" type="button" onClick={() => openAdd()}><span>＋</span> {t('action.addPlace')}</button></div>
         </header>
 
         <main className="dashboard">
           {noticeKey && <div className="import-notice" role="status"><span>{t(noticeKey)}</span><button type="button" onClick={dismissNotice}>{t('notice.dismiss')}</button></div>}
           {importAvailable && <div className="import-notice" role="status"><span>{t('import.notice', { n: localEntriesSnapshot.length })}</span><button type="button" onClick={importLocalJournal}>{t('import.button')}</button></div>}
-          {view === 'explore' ? (
+          {view === 'friends' && userId ? (
+            <FriendsView friendships={friendships} share={share} hasLoadError={friendsHaveError} onRefresh={refreshFriends} onOpenShare={() => setIsShareOpen(true)} />
+          ) : view === 'explore' ? (
             <Explore visitedCountryIds={visitedCountryIds} onAddPlace={openAdd} wishlistIds={pendingWishIds} onToggleWishlist={toggleWishlist} focus={exploreFocus} />
           ) : view === 'places' ? (
           <section className="places-view reveal" aria-labelledby="places-page-heading">
@@ -622,6 +643,7 @@ function App() {
       {gallery && (photosByEntry[gallery.entryId]?.length ?? 0) > 0 && <PhotoGallery photos={photosByEntry[gallery.entryId]} startIndex={gallery.index} title={entries.find((item) => item.id === gallery.entryId)?.city ?? ''} onClose={() => setGallery(null)} />}
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
+      {isShareOpen && userId && userEmail && <ShareDialog userId={userId} email={userEmail} onClose={closeShare} onSaved={() => void refreshFriends()} />}
 
       {formOpen && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false) }}>
         <section className="entry-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
