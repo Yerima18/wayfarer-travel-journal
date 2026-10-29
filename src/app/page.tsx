@@ -571,6 +571,7 @@ function App() {
           <WorldProgress countryCount={countryCount} rankTitle={explorerTitle} />
 
           <section className="content-grid">
+            <div className="main-column">
             <article className="panel map-panel reveal" style={revealStyle(4)} aria-labelledby="map-heading">
               <div className="panel-heading">
                 <div><div className="panel-kicker">{t('map.kicker')}</div><h2 id="map-heading">{t('map.title')}</h2></div>
@@ -579,6 +580,8 @@ function App() {
               <WorldMap visitedCountryIds={visitedCountryIds} wishlistIds={pendingWishIds} onSelectCountry={openAdd} />
               <div className="map-foot"><span>{t('map.foot')}</span><span>{t('map.marked', { n: countryCount })}</span></div>
             </article>
+            <WishlistPanel wishlistIds={pendingWishIds} candidateIds={wishCandidateIds} onAdd={toggleWishlist} onRemove={toggleWishlist} onVisited={openAdd} />
+            </div>
 
             <article className="panel recent-panel reveal" style={revealStyle(5)} id="places" aria-labelledby="places-heading">
               <div className="panel-heading recent-heading">
@@ -608,8 +611,6 @@ function App() {
               )}
             </article>
           </section>
-
-          <WishlistPanel wishlistIds={pendingWishIds} candidateIds={wishCandidateIds} onAdd={toggleWishlist} onRemove={toggleWishlist} onVisited={openAdd} />
 
           </>
           )}
