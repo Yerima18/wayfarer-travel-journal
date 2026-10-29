@@ -1,9 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Wayfarer — A Personal Travel Journal',
   description: 'A quiet little atlas for the places you have been and the moments you want to remember.',
+  icons: { apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'Wayfarer', statusBarStyle: 'default' },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#4f35d9',
 }
 
 // Browser auto-translate swaps text nodes for its own elements, which makes React throw when it

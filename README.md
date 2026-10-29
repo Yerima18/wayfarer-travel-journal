@@ -25,6 +25,7 @@ Wayfarer is a colourful web app for keeping track of the places you have been, a
 - English and French: follows your browser language, with an EN/FR toggle that remembers your choice
 - Light and dark mode: follows your device setting, with a toggle that remembers your choice
 - Phone friendly: hamburger menu, touch-sized controls, smooth animations (they respect "reduce motion")
+- Installable: add Wayfarer to your phone's home screen and it opens full screen like an app, with its own icon
 - Works instantly with no account: your journal is saved in your browser
 - Optional account (email + password): your journal is saved in the cloud and follows you across devices
 - Private by design: each account can only ever read and change its own data
@@ -61,10 +62,23 @@ src/
                             (messages.ts), photo and avatar helpers
   lib/supabase/             Supabase clients (browser + server) and env helpers
   proxy.ts                  Keeps signed-in sessions fresh (Next.js proxy)
+public/icons/               App icon (home screen)
 public/visa/                Visa data, one small file per passport
 supabase/schema.sql         Places table and security rules
 supabase/photos.sql         Photos table, private storage bucket and their rules
 ```
+
+---
+
+## Install it on your phone
+
+Open the live site, then:
+
+- **iPhone / iPad (Safari):** tap the Share button, then **Add to Home Screen**.
+- **Android (Chrome):** open the ⋮ menu, then **Install app** (or **Add to Home screen**).
+- **Desktop (Chrome / Edge):** click the install icon at the right of the address bar.
+
+The icon lives in `public/icons/` (`icon.svg` is the source) and the app details in `src/app/manifest.ts`. There is no offline mode yet: the app needs a connection to load.
 
 ---
 
